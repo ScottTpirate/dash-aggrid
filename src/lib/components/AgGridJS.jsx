@@ -1,0 +1,621 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
+import { AgGridReact } from 'ag-grid-react';
+import {
+  ModuleRegistry,
+  AllCommunityModule,
+  TextFilterModule,
+  ColumnAutoSizeModule,
+  themeQuartz,
+  themeAlpine,
+  BeanStub,
+} from 'ag-grid-community';
+
+class ColumnMenuGuard extends BeanStub {
+  constructor(...args) {
+    super(...args);
+    this.beanName = 'agGridJsColumnMenuGuard';
+  }
+
+  postConstruct() {
+    const factory = this?.beans?.colMenuFactory ?? null;
+    if (!factory || factory.__agGridJsGuardApplied) {
+      return;
+    }
+
+    const original = typeof factory.getMenuItems === 'function'
+      ? factory.getMenuItems.bind(factory)
+      : null;
+
+    if (!original) {
+      return;
+    }
+
+    factory.getMenuItems = (column = null, columnGroup = null) => {
+      if (columnGroup && typeof columnGroup.getColGroupDef !== 'function') {
+        columnGroup = null;
+      }
+      return original(column, columnGroup);
+    };
+
+    factory.__agGridJsGuardApplied = true;
+  }
+}
+
+let modulesRegistered = false;
+let menuGuardRegistered = false;
+
+let cachedAgVersion = typeof AllCommunityModule?.version === 'string'
+  ? AllCommunityModule.version
+  : null;
+const getAgGridVersion = () => {
+  if (cachedAgVersion) {
+    return cachedAgVersion;
+  }
+
+  try {
+    // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+    const enterprise = require('ag-grid-enterprise');
+    cachedAgVersion = enterprise?.AllEnterpriseModule?.version
+      || enterprise?.ColumnMenuModule?.version
+      || null;
+  } catch (err) {
+    cachedAgVersion = null;
+  }
+
+  return cachedAgVersion;
+};
+
+const registerColumnMenuGuard = (enterprise) => {
+  if (menuGuardRegistered) {
+    return;
+  }
+
+  const moduleDef = {
+    moduleName: 'AgGridJsColumnMenuGuard',
+    version: getAgGridVersion() || '0.0.0-aggridjs',
+    beans: [ColumnMenuGuard],
+  };
+
+  if (enterprise?.ColumnMenuModule) {
+    moduleDef.dependsOn = [enterprise.ColumnMenuModule];
+  }
+
+  try {
+    ModuleRegistry.registerModules([moduleDef]);
+    menuGuardRegistered = true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('AgGridJS failed to register column menu guard', err);
+  }
+};
+
+const ensureModulesRegistered = () => {
+  if (modulesRegistered) return;
+
+  try {
+    ModuleRegistry.registerModules([AllCommunityModule, TextFilterModule, ColumnAutoSizeModule]);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('AgGridJS failed to register AllCommunityModule', err);
+  }
+  try {
+    let enterprise = null;
+    try {
+      // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+      enterprise = require('ag-grid-enterprise');
+    } catch (err) {
+      enterprise = null;
+    }
+
+    if (!enterprise) {
+      throw new Error('ag-grid-enterprise not found');
+    }
+
+    const additional = [];
+    const addIfPresent = (module) => {
+      if (module) {
+        additional.push(module);
+      }
+    };
+
+    addIfPresent(enterprise.AllEnterpriseModule);
+    addIfPresent(enterprise.MenuModule);
+    addIfPresent(enterprise.ColumnMenuModule);
+    addIfPresent(enterprise.ContextMenuModule);
+    addIfPresent(enterprise.SideBarModule);
+    addIfPresent(enterprise.StatusBarModule);
+    addIfPresent(enterprise.ColumnsToolPanelModule);
+    addIfPresent(enterprise.FiltersToolPanelModule);
+    addIfPresent(enterprise.NewFiltersToolPanelModule);
+    addIfPresent(enterprise.RowGroupingModule);
+    addIfPresent(enterprise.RowGroupingPanelModule);
+    addIfPresent(enterprise.GroupFilterModule);
+    addIfPresent(enterprise.RowSelectionModule);
+    addIfPresent(enterprise.ServerSideRowModelModule);
+    addIfPresent(enterprise.ServerSideRowModelApiModule);
+
+    let chartsModule = null;
+    try {
+      // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+      const chartsEnterprise = require('ag-charts-enterprise');
+      chartsModule = chartsEnterprise?.AgChartsEnterpriseModule || chartsEnterprise?.AgChartsCommunityModule || null;
+    } catch (err) {
+      chartsModule = null;
+    }
+
+    if (!chartsModule) {
+      try {
+        // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+        const chartsCommunity = require('ag-charts-community');
+        chartsModule = chartsCommunity?.AgChartsCommunityModule || null;
+      } catch (err) {
+        chartsModule = null;
+      }
+    }
+
+    if (enterprise.IntegratedChartsModule && chartsModule) {
+      additional.push(enterprise.IntegratedChartsModule.with(chartsModule));
+    } else if (enterprise.IntegratedChartsModule && !chartsModule) {
+      // eslint-disable-next-line no-console
+      console.warn('AgGridJS integrated charts requested but no ag-charts module is installed');
+    }
+
+    if (additional.length) {
+      ModuleRegistry.registerModules(additional);
+    }
+
+    registerColumnMenuGuard(enterprise);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('AgGridJS enterprise modules unavailable', err);
+    registerColumnMenuGuard(null);
+  }
+
+  modulesRegistered = true;
+};
+
+const createDeferred = () => {
+  let resolve;
+  const promise = new Promise((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
+
+const ensureApiRegistry = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  if (!window.AgGridJsRegistry) {
+    window.AgGridJsRegistry = {};
+  }
+  const registry = window.AgGridJsRegistry;
+  registry._records = registry._records || {};
+  registry.getApiAsync = (gridId) => {
+    if (!gridId) {
+      return Promise.resolve(null);
+    }
+    if (!registry._records[gridId]) {
+      registry._records[gridId] = createDeferred();
+    }
+    return registry._records[gridId].promise;
+  };
+  return registry;
+};
+
+ensureModulesRegistered();
+ensureApiRegistry();
+
+if (typeof window !== 'undefined') {
+  window.AgGridJsThemes = window.AgGridJsThemes || {};
+  if (!window.AgGridJsThemes.themeQuartz) {
+    window.AgGridJsThemes.themeQuartz = themeQuartz;
+  }
+  if (!window.AgGridJsThemes.themeAlpine) {
+    window.AgGridJsThemes.themeAlpine = themeAlpine;
+  }
+}
+
+const setApiInstance = (gridId, api) => {
+  const registry = ensureApiRegistry();
+  if (!registry || !gridId) {
+    return;
+  }
+  const resolved = Promise.resolve(api);
+  registry._records[gridId] = {
+    promise: resolved,
+    resolve: () => {},
+  };
+};
+
+const withSsrmFilterValues = (options, gridId, configArgs) => {
+  if (!gridId || !configArgs || !configArgs.ssrm || !options) {
+    return options;
+  }
+
+  const ssrmArgs = configArgs.ssrm || {};
+  const baseEndpointRaw = ssrmArgs.endpoint || ssrmArgs.base || '/_aggrid/ssrm';
+  const distinctEndpointRaw = ssrmArgs.distinctEndpoint || `${baseEndpointRaw}/distinct`;
+  const baseEndpoint = String(baseEndpointRaw).replace(/\/$/, '');
+  const distinctEndpoint = String(distinctEndpointRaw).replace(/\/$/, '');
+
+  const patchColumns = (cols) => {
+    if (!Array.isArray(cols)) {
+      return cols;
+    }
+    return cols.map((colDef) => {
+      if (!colDef || typeof colDef !== 'object') {
+        return colDef;
+      }
+
+      const next = { ...colDef };
+      if (Array.isArray(next.children) && next.children.length) {
+        next.children = patchColumns(next.children);
+      }
+
+      if (next.filter === 'agSetColumnFilter') {
+        const params = { ...(next.filterParams || {}) };
+        const hasCustom =
+          typeof params.values === 'function' ||
+          (typeof params.values === 'object' && params.values !== null);
+
+        if (!hasCustom) {
+          params.values = async (paramsObj) => {
+            const colId = paramsObj?.column?.getColId?.() || next.field;
+            if (!colId) {
+              paramsObj.success([]);
+              return;
+            }
+            const url = `${distinctEndpoint}/${encodeURIComponent(gridId)}/${encodeURIComponent(colId)}`;
+            try {
+              const response = await fetch(url, { credentials: 'same-origin' });
+              const ok =
+                response.ok &&
+                String(response.headers.get('content-type') || '').startsWith('application/json');
+              const payload = ok ? await response.json() : [];
+              paramsObj.success(Array.isArray(payload) ? payload : []);
+            } catch (err) {
+              console.error(`[AgGridJS:ssrm] distinct fetch failed`, err);
+              paramsObj.success([]);
+            }
+          };
+        }
+
+        next.filterParams = params;
+      }
+
+      return next;
+    });
+  };
+
+  const patched = { ...options };
+  if (Array.isArray(options.columnDefs)) {
+    patched.columnDefs = patchColumns(options.columnDefs);
+  }
+  if (Array.isArray(options.autoGroupColumnDef?.children)) {
+    patched.autoGroupColumnDef = {
+      ...options.autoGroupColumnDef,
+      children: patchColumns(options.autoGroupColumnDef.children),
+    };
+  }
+
+  if (patched.serverSideDatasource && typeof patched.serverSideDatasource.getRows === 'function') {
+    const originalGetRows = patched.serverSideDatasource.getRows;
+    patched.serverSideDatasource = {
+      ...patched.serverSideDatasource,
+      getRows: (params, ...rest) => {
+        const requestPayload = params?.request || {};
+        if (!requestPayload.gridId) {
+          requestPayload.gridId = gridId;
+        }
+        const nextParams = { ...params, request: requestPayload };
+        return originalGetRows(nextParams, ...rest);
+      },
+    };
+  }
+
+  return patched;
+};
+
+const getConfig = (key) => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const map = window.AGGRID_CONFIGS || {};
+  return map[key] || null;
+};
+
+const resolveConfig = (context) => {
+  const { configKey } = context;
+  const candidate = getConfig(configKey);
+  if (!candidate) {
+    return null;
+  }
+
+  if (typeof candidate === 'function') {
+    try {
+      return candidate(context);
+    } catch (err) {
+      console.error('AgGridJS config resolver failed', err);
+      return null;
+    }
+  }
+
+  return candidate;
+};
+
+const withDash = (userHandler, dashFn) => {
+  if (typeof userHandler !== 'function' && typeof dashFn !== 'function') {
+    return undefined;
+  }
+
+  return (...args) => {
+    try {
+      if (typeof userHandler === 'function') {
+        userHandler(...args);
+      }
+    } catch (err) {
+      console.error('AgGridJS user handler threw', err);
+    }
+
+    try {
+      if (typeof dashFn === 'function') {
+        dashFn(...args);
+      }
+    } catch (err) {
+      console.error('AgGridJS dash bridge failed', err);
+    }
+  };
+};
+
+const buildSortModel = (api) => {
+  if (!api || typeof api.getColumnState !== 'function') {
+    return [];
+  }
+
+  return (api.getColumnState() || [])
+    .filter((col) => !!col.sort)
+    .map((col) => ({
+      colId: col.colId,
+      sort: col.sort,
+      sortIndex: col.sortIndex,
+    }));
+};
+
+/**
+ * AgGridJS mounts AgGridReact using configurations stored on window.AGGRID_CONFIGS.
+ * The component relays selection, filter, sort, and edit events back to Dash via setProps.
+ */
+const AgGridJS = (props) => {
+  const {
+    id,
+    configKey,
+    className,
+    style,
+    configArgs = null,
+    rowData: rowDataProp = null,
+    setProps,            // injected by Dash
+  } = props;
+
+  const apiRef = useRef(null);
+
+  const configArgsKey = useMemo(() => {
+    try {
+      return JSON.stringify(configArgs ?? null);
+    } catch (err) {
+      console.error('AgGridJS failed to serialise configArgs', err);
+      return '__error__';
+    }
+  }, [configArgs]);
+
+  const dashPropsRef = useRef(props);
+  useEffect(() => {
+    dashPropsRef.current = props;
+  });
+
+  const [resolvedConfig, setResolvedConfig] = useState(() => resolveConfig({
+    configKey,
+    id,
+    configArgs,
+    dashProps: props,
+  }));
+
+  useEffect(() => {
+    let cancelled = false;
+    const resolveAndSet = () => {
+      const config = resolveConfig({
+        configKey,
+        id,
+        configArgs,
+        dashProps: dashPropsRef.current,
+      });
+      if (!cancelled) {
+        setResolvedConfig(config);
+      }
+      return !!config;
+    };
+
+    if (resolveAndSet()) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    let attempts = 0;
+    const maxAttempts = 50;
+    const interval = typeof window !== 'undefined'
+      ? window.setInterval(() => {
+        attempts += 1;
+        if (resolveAndSet() || attempts >= maxAttempts) {
+          window.clearInterval(interval);
+        }
+      }, 100)
+      : null;
+
+    return () => {
+      cancelled = true;
+      if (interval) {
+        window.clearInterval(interval);
+      }
+    };
+  }, [configKey, id, configArgsKey]);
+
+  if (!resolvedConfig || typeof resolvedConfig !== 'object') {
+    return (
+      <div id={id} className={className} style={{ ...(style || {}), padding: 8, border: '1px dashed #ccc' }}>
+        Missing AG Grid config for key: <code>{String(configKey)}</code>
+      </div>
+    );
+  }
+
+  const {
+    onGridReady: userReady,
+    onSelectionChanged: userSelection,
+    onFilterChanged: userFilter,
+    onSortChanged: userSort,
+    onCellValueChanged: userEdit,
+    theme: userTheme,
+    ...gridOptions
+  } = resolvedConfig;
+  const theme = userTheme || themeQuartz;
+
+  const finalGridOptions = Array.isArray(rowDataProp)
+    ? { ...gridOptions, rowData: rowDataProp }
+    : { ...gridOptions };
+
+  const gridOptionsWithSsrm = withSsrmFilterValues(finalGridOptions, id, configArgs);
+
+  const syncSelectedRows = () => {
+    if (!setProps || !apiRef.current) {
+      return;
+    }
+    setProps({ selectedRows: apiRef.current.getSelectedRows() || [] });
+  };
+
+  const syncFilterModel = () => {
+    if (!setProps || !apiRef.current) {
+      return;
+    }
+    setProps({ filterModel: apiRef.current.getFilterModel() || null });
+  };
+
+  const syncSortModel = () => {
+    if (!setProps || !apiRef.current) {
+      return;
+    }
+    setProps({ sortModel: buildSortModel(apiRef.current) });
+  };
+
+  const onGridReady = withDash(userReady, (params) => {
+    apiRef.current = params?.api || null;
+    if (apiRef.current && id) {
+      setApiInstance(id, apiRef.current);
+    }
+    if (!setProps || !apiRef.current) {
+      return;
+    }
+    syncSelectedRows();
+    syncFilterModel();
+    syncSortModel();
+  });
+
+  const onSelectionChanged = withDash(userSelection, syncSelectedRows);
+  const onFilterChanged = withDash(userFilter, syncFilterModel);
+  const onSortChanged = withDash(userSort, syncSortModel);
+
+  const onCellValueChanged = withDash(userEdit, (event) => {
+    if (!setProps) {
+      return;
+    }
+    const payload = {
+      rowId: event?.data?.id ?? event?.node?.id ?? null,
+      colId: event?.column?.getColId?.() ?? event?.colDef?.field ?? null,
+      oldValue: event?.oldValue,
+      newValue: event?.newValue,
+    };
+    setProps({ editedCells: [payload] });
+  });
+
+  return (
+    <div id={id} className={className} style={style}>
+      <div style={{ width: '100%', height: '100%' }}>
+        <AgGridReact
+          {...gridOptionsWithSsrm}
+          theme={theme}
+          onGridReady={onGridReady}
+          onSelectionChanged={onSelectionChanged}
+          onFilterChanged={onFilterChanged}
+          onSortChanged={onSortChanged}
+          onCellValueChanged={onCellValueChanged}
+        />
+      </div>
+    </div>
+  );
+};
+
+AgGridJS.propTypes = {
+  /**
+   * The ID used to identify this component in Dash callbacks.
+   */
+  id: PropTypes.string,
+  /**
+   * Key used to look up a configuration object in window.AGGRID_CONFIGS.
+   */
+  configKey: PropTypes.string.isRequired,
+  /**
+   * Optional CSS class to apply to the outer grid container.
+   */
+  className: PropTypes.string,
+  /**
+   * Inline style object applied to the grid container.
+   */
+  style: PropTypes.object,
+  /**
+   * Optional JSON-serialisable payload passed to config factory functions.
+   */
+  configArgs: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array,
+    PropTypes.string,
+    PropTypes.number,
+    PropTypes.bool,
+    PropTypes.oneOf([null]),
+  ]),
+  /**
+   * Dash-assigned callback for reporting property changes to Dash.
+   */
+  setProps: PropTypes.func,
+  /**
+   * Array of row objects selected in the grid. Populated by the component.
+   */
+  selectedRows: PropTypes.arrayOf(PropTypes.object),
+  /**
+   * Current AG Grid filter model. Populated by the component.
+   */
+  filterModel: PropTypes.object,
+  /**
+   * Current AG Grid sort model (colId, sort, sortIndex). Populated by the component.
+   */
+  sortModel: PropTypes.arrayOf(PropTypes.shape({
+    colId: PropTypes.string,
+    sort: PropTypes.oneOf(['asc', 'desc']),
+    sortIndex: PropTypes.number
+  })),
+  /**
+   * Details of the most recent cell edit (rowId, colId, oldValue, newValue).
+   */
+  editedCells: PropTypes.arrayOf(PropTypes.shape({
+    rowId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    colId: PropTypes.string,
+    oldValue: PropTypes.any,
+    newValue: PropTypes.any
+  })),
+  /**
+   * Row data provided directly from Dash. Overrides rowData defined in the JS config.
+   */
+  rowData: PropTypes.arrayOf(PropTypes.object)
+};
+
+AgGridJS._dashprivate_isDummyProperty = false;
+export default AgGridJS;

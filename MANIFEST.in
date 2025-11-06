@@ -1,0 +1,11 @@
+include aggrid_js/aggrid_js.min.js
+include aggrid_js/aggrid_js.min.js.map
+include aggrid_js/async-*.js
+include aggrid_js/async-*.js.map
+include aggrid_js/*-shared.js
+include aggrid_js/*-shared.js.map
+include aggrid_js/metadata.json
+include aggrid_js/package-info.json
+include README.md
+include LICENSE
+include package.json
