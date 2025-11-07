@@ -1,5 +1,5 @@
 from dash import Dash, html, Output, Input
-from aggrid_js import AgGridJS
+from dash_aggrid import AgGridJS
 
 from sample_data import SALES_ROWS
 

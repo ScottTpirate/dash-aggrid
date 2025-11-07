@@ -9,7 +9,7 @@ import sys
 import importlib
 
 
-components_package = 'aggrid_js'
+components_package = 'dash_aggrid'
 
 components_lib = importlib.import_module(components_package)
 

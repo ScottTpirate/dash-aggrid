@@ -1,15 +1,15 @@
-.aggridJs_js_metadata <- function() {
-deps_metadata <- list(`aggrid_js` = structure(list(name = "aggrid_js",
+.dashAggrid_js_metadata <- function() {
+deps_metadata <- list(`dash_aggrid` = structure(list(name = "dash_aggrid",
 version = "0.2.0", src = list(href = NULL,
 file = "deps"), meta = NULL,
-script = 'aggrid_js.min.js',
-stylesheet = NULL, head = NULL, attachment = NULL, package = "aggridJs",
+script = 'dash_aggrid.min.js',
+stylesheet = NULL, head = NULL, attachment = NULL, package = "dashAggrid",
 all_files = FALSE), class = "html_dependency"),
-`aggrid_js` = structure(list(name = "aggrid_js",
+`dash_aggrid` = structure(list(name = "dash_aggrid",
 version = "0.2.0", src = list(href = NULL,
 file = "deps"), meta = NULL,
-script = 'aggrid_js.min.js.map',
-stylesheet = NULL, head = NULL, attachment = NULL, package = "aggridJs",
+script = 'dash_aggrid.min.js.map',
+stylesheet = NULL, head = NULL, attachment = NULL, package = "dashAggrid",
 all_files = FALSE, dynamic = TRUE), class = "html_dependency"))
 return(deps_metadata)
 }

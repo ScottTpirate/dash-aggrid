@@ -1,6 +1,6 @@
-# AgGrid JS
+# dash_aggrid
 
-AgGrid JS is a deliberately thin Dash wrapper around **AgGridReact**. It mounts the AG Grid React component directly, so you can copy examples from the AG Grid docs, drop them into a browser-side config registry, and the grid just works inside Dash.
+dash_aggrid is a deliberately thin Dash wrapper around **AgGridReact**. It mounts the AG Grid React component directly, so you can copy examples from the AG Grid docs, drop them into a browser-side config registry, and the grid just works inside Dash.
 
 > ⚠️ **Pick one wrapper per app.** AgGridJS is not meant to run alongside `dash-ag-grid`; loading both introduces duplicate CSS, overlapping themes, and conflicting event glue. Choose one approach per Dash project.
 
@@ -65,10 +65,10 @@ Visit http://127.0.0.1:8050 for the sample app. `demo_app.py` renders three grid
 
 ### In an existing Dash project
 
-1. Install the Python package (local path shown; swap in the PyPI name `dash-aggrid` when using the published wheel):
+1. Install the Python package (local path shown; swap in the PyPI name `dash_aggrid` when using the published wheel):
 
    ```bash
-   python -m pip install /path/to/dash-aggrid
+   python -m pip install /path/to/dash_aggrid
    ```
 
 2. If working from source, build the JS bundle once:
@@ -84,7 +84,7 @@ Visit http://127.0.0.1:8050 for the sample app. `demo_app.py` renders three grid
 4. Import and use the component:
 
    ```python
-   from aggrid_js import AgGridJS
+   from dash_aggrid import AgGridJS
    ```
 
 Dash will serve the JS bundle automatically when the component is requested.
@@ -180,7 +180,7 @@ The demo app follows this structure for every grid (`feature-grid`, `sales-grid`
 
 ```python
 from dash import Dash, html, Output, Input
-from aggrid_js import AgGridJS
+from dash_aggrid import AgGridJS
 
 app = Dash(__name__)  # serves ./assets/aggrid-configs.js automatically
 
@@ -314,7 +314,7 @@ window.AGCHART_CONFIGS['revenue-chart'] = ({ configArgs }) => ({
 In Dash:
 
 ```python
-from aggrid_js import AgChartsJS
+from dash_aggrid import AgChartsJS
 
 AgChartsJS(id="revenue", optionsKey="revenue-chart", style={"height": 360})
 ```
@@ -356,7 +356,7 @@ AgGridJS pairs a DuckDB-aware SQL builder with Dash hooks so server-side row-mod
 ```python
 from pathlib import Path
 
-from aggrid_js import AgGridJS
+from dash_aggrid import AgGridJS
 
 AgGridJS(
     id="orders-grid",
@@ -483,7 +483,7 @@ python app.py              # run the demo Dash app
 ```
 
 - Component source lives in `src/lib/components/AgGridJS.jsx`.
-- Webpack output goes to `aggrid_js/aggrid_js.min.js`.
+- Webpack output goes to `dash_aggrid/dash_aggrid.min.js`.
 - Python/R/Julia wrappers are regenerated via `dash-generate-components` during `npm run build`.
 
 Need to tweak bundling? Edit `webpack.config.js`.
@@ -511,7 +511,7 @@ For end-to-end tests, reintroduce a `dash_duo` Selenium test—just make sure Ch
 
 ## Migration checklist (dash-ag-grid → AgGridJS)
 
-- Install the new wrapper (`pip install dash-aggrid`) and rebuild once (`npm install && npm run build`) so Dash can serve the bundled assets.
+- Install the new wrapper (`pip install dash_aggrid`) and rebuild once (`npm install && npm run build`) so Dash can serve the bundled assets.
 - Move grid definitions out of Dash props and into `assets/aggrid-configs.js`. Copy each grid’s `columnDefs`, default column settings, and event handlers into a registry entry (object or factory) so the asset controls configuration, not Python.
 - Mirror the same approach for charts (`assets/agcharts-configs.js`) so chart options live alongside grid configs and can react to `configArgs`.
 - Swap Python `gridOptions`/`columnState` assignments for `configKey`/`configArgs`. Any runtime values (locale, SSRM metadata, user selections) travel through `configArgs` and the JS factory can honour them.

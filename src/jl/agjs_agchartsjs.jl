@@ -20,6 +20,6 @@ Keyword arguments:
 function agjs_agchartsjs(; kwargs...)
         available_props = Symbol[:id, :className, :configArgs, :options, :optionsKey, :style]
         wild_props = Symbol[]
-        return Component("agjs_agchartsjs", "AgChartsJS", "aggrid_js", available_props, wild_props; kwargs...)
+        return Component("agjs_agchartsjs", "AgChartsJS", "dash_aggrid", available_props, wild_props; kwargs...)
 end
 

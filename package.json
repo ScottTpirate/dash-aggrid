@@ -1,5 +1,5 @@
 {
-  "name": "aggrid_js",
+  "name": "dash_aggrid",
   "version": "0.2.0",
   "description": "Tiny Dash wrapper that mounts AgGridReact using a JS config registry",
   "repository": {
@@ -16,7 +16,7 @@
     "validate-init": "python _validate_init.py",
     "prepublishOnly": "npm run validate-init",
     "build:js": "webpack --mode production",
-    "build:backends": "dash-generate-components ./src/lib/components aggrid_js -p package-info.json --r-prefix 'agjs' --jl-prefix 'agjs' --ignore \\.test\\.",
+    "build:backends": "dash-generate-components ./src/lib/components dash_aggrid -p package-info.json --r-prefix 'agjs' --jl-prefix 'agjs' --ignore \\.test\\.",
     "build:backends-activated": "(. venv/bin/activate || venv\\scripts\\activate && npm run build:backends)",
     "build": "npm run build:js && npm run build:backends",
     "build:activated": "npm run build:js && npm run build:backends-activated"

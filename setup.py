@@ -10,10 +10,10 @@ long_description = (here / 'README.md').read_text()
 package_name = package["name"].replace(" ", "_").replace("-", "_")
 
 setup(
-    name="dash-aggrid",
+    name="dash_aggrid",
     version=package["version"],
     author=package['author'],
-    packages=['aggrid_js'],
+    packages=['dash_aggrid'],
     include_package_data=True,
     license=package['license'],
     description=package.get('description', package_name),
