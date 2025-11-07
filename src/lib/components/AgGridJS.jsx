@@ -11,15 +11,107 @@ import {
   BeanStub,
 } from 'ag-grid-community';
 
+const isDevEnv = typeof process !== 'undefined'
+  ? process?.env?.NODE_ENV !== 'production'
+  : false;
+
+const VALID_MENU_TABS = new Set(['generalMenuTab', 'filterMenuTab', 'columnsMenuTab']);
+const warnedMenuConfigs = new Set();
+const warnOnceRegistry = new Set();
+
+const warnOnce = (key, logger, ...args) => {
+  if (warnOnceRegistry.has(key)) {
+    return;
+  }
+  warnOnceRegistry.add(key);
+  try {
+    logger(...args);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[AgGridJS] failed to emit warning', err);
+  }
+};
+
+const describeColumn = (colDef, index) => (
+  colDef?.field
+    || colDef?.colId
+    || colDef?.headerName
+    || `column[${index}]`
+);
+
+const validateMenuTabs = (label, tabs) => {
+  if (!Array.isArray(tabs) || !tabs.length) {
+    return;
+  }
+  const invalid = tabs.filter((tab) => typeof tab !== 'string' || !VALID_MENU_TABS.has(tab));
+  if (!invalid.length) {
+    return;
+  }
+  warnOnce(
+    `aggridjs-invalid-menu-tabs-${label}`,
+    // eslint-disable-next-line no-console
+    console.error,
+    `AgGridJS config "${label}" defines unsupported menuTabs: ${invalid.join(', ')}. `
+      + 'Valid values are generalMenuTab, filterMenuTab, columnsMenuTab.'
+  );
+};
+
+const validateGridMenuConfig = (configKey, gridOptions) => {
+  if (!isDevEnv || !gridOptions || warnedMenuConfigs.has(configKey)) {
+    return;
+  }
+
+  const columnDefs = gridOptions.columnDefs;
+  const runValidation = () => {
+    if (Array.isArray(gridOptions?.defaultColDef)) {
+      gridOptions.defaultColDef.forEach((def, index) => {
+        validateMenuTabs(`${configKey}:defaultColDef[${index}]`, def?.menuTabs);
+      });
+    } else if (gridOptions?.defaultColDef) {
+      validateMenuTabs(`${configKey}:defaultColDef`, gridOptions.defaultColDef.menuTabs);
+    }
+
+    const walk = (defs, lineage = []) => {
+      if (!Array.isArray(defs)) {
+        return;
+      }
+      defs.forEach((def, index) => {
+        if (!def || typeof def !== 'object') {
+          return;
+        }
+        const labelParts = [...lineage, describeColumn(def, index)];
+        const label = `${configKey}:${labelParts.join('>')}`;
+        validateMenuTabs(label, def.menuTabs);
+        if (Array.isArray(def.children) && def.children.length) {
+          walk(def.children, labelParts);
+        }
+      });
+    };
+    walk(columnDefs);
+  };
+
+  runValidation();
+  warnedMenuConfigs.add(configKey);
+};
+
 class ColumnMenuGuard extends BeanStub {
   constructor(...args) {
     super(...args);
     this.beanName = 'agGridJsColumnMenuGuard';
+    this.hasLoggedInvalidGroup = false;
   }
 
   postConstruct() {
     const factory = this?.beans?.colMenuFactory ?? null;
     if (!factory || factory.__agGridJsGuardApplied) {
+      if (!factory && isDevEnv) {
+        warnOnce(
+          'aggridjs-colmenu-guard-missing-factory',
+          // eslint-disable-next-line no-console
+          console.warn,
+          'AgGridJS: ColumnMenuGuard could not locate colMenuFactory; header menus may break if menuTabs are used.'
+        );
+      }
       return;
     }
 
@@ -33,6 +125,17 @@ class ColumnMenuGuard extends BeanStub {
 
     factory.getMenuItems = (column = null, columnGroup = null) => {
       if (columnGroup && typeof columnGroup.getColGroupDef !== 'function') {
+        if (!this.hasLoggedInvalidGroup && isDevEnv) {
+          this.hasLoggedInvalidGroup = true;
+          warnOnce(
+            'aggridjs-invalid-column-group',
+            // eslint-disable-next-line no-console
+            console.error,
+            '[AgGridJS] Column menu received a columnGroup without getColGroupDef(). '
+              + 'This usually means the column definition is a plain object or enterprise modules failed to register.',
+            columnGroup
+          );
+        }
         columnGroup = null;
       }
       return original(column, columnGroup);
@@ -85,8 +188,13 @@ const registerColumnMenuGuard = (enterprise) => {
     ModuleRegistry.registerModules([moduleDef]);
     menuGuardRegistered = true;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('AgGridJS failed to register column menu guard', err);
+    warnOnce(
+      'aggridjs-column-menu-guard-register-error',
+      // eslint-disable-next-line no-console
+      console.warn,
+      'AgGridJS failed to register column menu guard',
+      err
+    );
   }
 };
 
@@ -483,6 +591,11 @@ const AgGridJS = (props) => {
   const finalGridOptions = Array.isArray(rowDataProp)
     ? { ...gridOptions, rowData: rowDataProp }
     : { ...gridOptions };
+
+  if (isDevEnv) {
+    const validationKey = configKey || id || 'aggrid-js-grid';
+    validateGridMenuConfig(validationKey, finalGridOptions);
+  }
 
   const gridOptionsWithSsrm = withSsrmFilterValues(finalGridOptions, id, configArgs);
 

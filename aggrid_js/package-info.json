@@ -4,12 +4,12 @@
   "description": "Tiny Dash wrapper that mounts AgGridReact using a JS config registry",
   "repository": {
     "type": "git",
-    "url": "git://github.com/gulf-of-analytics/aggrid-js.git"
+    "url": "git://github.com/ScottTpirate/dash-aggrid.git"
   },
   "bugs": {
-    "url": "https://github.com/gulf-of-analytics/aggrid-js/issues"
+    "url": "https://github.com/ScottTpirate/dash-aggrid/issues"
   },
-  "homepage": "https://github.com/gulf-of-analytics/aggrid-js",
+  "homepage": "https://github.com/ScottTpirate/dash-aggrid",
   "main": "build/index.js",
   "scripts": {
     "start": "webpack serve --config ./webpack.serve.config.js --open",

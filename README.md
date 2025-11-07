@@ -47,8 +47,8 @@ Dash ships with Python-to-JS property mappings for many components. AG Grid alre
 Clone the repo and run the sample app:
 
 ```bash
-git clone https://github.com/plotly/dash-component-boilerplate aggrid-js
-cd aggrid-js
+git clone https://github.com/ScottTpirate/dash-aggrid.git
+cd dash-aggrid
 npm install
 npm run build
 python -m pip install -e .
@@ -65,16 +65,16 @@ Visit http://127.0.0.1:8050 for the sample app. `demo_app.py` renders three grid
 
 ### In an existing Dash project
 
-1. Install the Python package (local path shown; swap in PyPI name when published):
+1. Install the Python package (local path shown; swap in the PyPI name `dash-aggrid` when using the published wheel):
 
    ```bash
-   python -m pip install /path/to/aggrid_js
+   python -m pip install /path/to/dash-aggrid
    ```
 
 2. If working from source, build the JS bundle once:
 
    ```bash
-   cd /path/to/aggrid_js
+   cd /path/to/dash-aggrid
    npm install
    npm run build
    ```
@@ -511,7 +511,7 @@ For end-to-end tests, reintroduce a `dash_duo` Selenium test—just make sure Ch
 
 ## Migration checklist (dash-ag-grid → AgGridJS)
 
-- Install the new wrapper (`pip install aggrid_js`) and rebuild once (`npm install && npm run build`) so Dash can serve the bundled assets.
+- Install the new wrapper (`pip install dash-aggrid`) and rebuild once (`npm install && npm run build`) so Dash can serve the bundled assets.
 - Move grid definitions out of Dash props and into `assets/aggrid-configs.js`. Copy each grid’s `columnDefs`, default column settings, and event handlers into a registry entry (object or factory) so the asset controls configuration, not Python.
 - Mirror the same approach for charts (`assets/agcharts-configs.js`) so chart options live alongside grid configs and can react to `configArgs`.
 - Swap Python `gridOptions`/`columnState` assignments for `configKey`/`configArgs`. Any runtime values (locale, SSRM metadata, user selections) travel through `configArgs` and the JS factory can honour them.
