@@ -10,9 +10,9 @@ agjsAgChartsJS <- function(id=NULL, className=NULL, configArgs=NULL, options=NUL
     component <- list(
         props = props,
         type = 'AgChartsJS',
-        namespace = 'dash_aggrid',
+        namespace = 'dash_aggrid_js',
         propNames = c('id', 'className', 'configArgs', 'options', 'optionsKey', 'style'),
-        package = 'dashAggrid'
+        package = 'dashAggridJS'
         )
 
     structure(component, class = c('dash_component', 'list'))

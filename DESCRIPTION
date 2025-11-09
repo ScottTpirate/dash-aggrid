@@ -1,6 +1,6 @@
-Package: dashAggrid
+Package: dashAggridJS
 Title: Tiny Dash wrapper that mounts AgGridReact using a JS config registry
-Version: 0.2.0
+Version: 0.2.2
 Description: Tiny Dash wrapper that mounts AgGridReact using a JS config registry
 Depends: R (>= 3.0.2)
 Imports: 

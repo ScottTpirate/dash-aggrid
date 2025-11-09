@@ -3,7 +3,7 @@ module DashAggrid
 using Dash
 
 const resources_path = realpath(joinpath( @__DIR__, "..", "deps"))
-const version = "0.2.0"
+const version = "0.2.2"
 
 include("jl/agjs_agchartsjs.jl")
 include("jl/agjs_aggridjs.jl")
@@ -11,7 +11,7 @@ include("jl/agjs_aggridjs.jl")
 function __init__()
     DashBase.register_package(
         DashBase.ResourcePkg(
-            "dash_aggrid",
+            "dash_aggrid_js",
             resources_path,
             version = version,
             [

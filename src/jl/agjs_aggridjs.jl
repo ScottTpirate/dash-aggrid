@@ -32,6 +32,5 @@ Those elements have the following types:
 function agjs_aggridjs(; kwargs...)
         available_props = Symbol[:id, :className, :configArgs, :configKey, :editedCells, :filterModel, :rowData, :selectedRows, :sortModel, :style]
         wild_props = Symbol[]
-        return Component("agjs_aggridjs", "AgGridJS", "dash_aggrid", available_props, wild_props; kwargs...)
+        return Component("agjs_aggridjs", "AgGridJS", "dash_aggrid_js", available_props, wild_props; kwargs...)
 end
-

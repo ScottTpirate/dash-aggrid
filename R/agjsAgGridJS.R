@@ -10,9 +10,9 @@ agjsAgGridJS <- function(id=NULL, className=NULL, configArgs=NULL, configKey=NUL
     component <- list(
         props = props,
         type = 'AgGridJS',
-        namespace = 'dash_aggrid',
+        namespace = 'dash_aggrid_js',
         propNames = c('id', 'className', 'configArgs', 'configKey', 'editedCells', 'filterModel', 'rowData', 'selectedRows', 'sortModel', 'style'),
-        package = 'dashAggrid'
+        package = 'dashAggridJS'
         )
 
     structure(component, class = c('dash_component', 'list'))

@@ -4,7 +4,7 @@ from pathlib import Path
 import duckdb
 from dash import Dash, Input, Output, dcc, html
 
-from dash_aggrid import AgChartsJS, AgGridJS
+from dash_aggrid_js import AgChartsJS, AgGridJS
 from sample_data import ANALYTICS_ROWS, INVENTORY_ROWS, SALES_ROWS, SSRM_ROWS
 
 
