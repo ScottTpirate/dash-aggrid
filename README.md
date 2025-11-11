@@ -633,6 +633,35 @@ print(f"SSRM routes ready at {endpoint}/exports-grid")
 
 If `register_duckdb_ssrm` never runs, the asset fetches will fail with `404` because no JSON routes exist. Make sure either the component mounts (automatic registration) or you call the helper during app startup.
 
+#### Dash pages & callable layouts
+
+`dash-aggrid-js` now pre-registers the default `_aggrid/ssrm` routes as soon as the package is imported, so Dash Pages or callable layouts continue to benefit from automatic SSRM wiring as long as you keep the default endpoint. If you override `configArgs["ssrm"]["endpoint"|"base"|"base_route"]` you must still ensure those custom routes exist before the server handles its first request.
+
+Add a `hooks.setup` handler when you need to prime non-default bases:
+
+```python
+from dash import hooks
+from dash_aggrid_js import register_duckdb_ssrm
+
+_SSRM_BASE_CONFIG = {
+    "duckdb_path": str(DUCKDB_FILE),
+    "table": "cases",
+    "base": "cases/ssrm",
+}
+_SSRM_GRID_IDS = (
+    "cases-agent-grid",
+    "cases-drilldown-grid",
+)
+
+
+@hooks.setup
+def _prime_custom_ssrm_routes(_app):
+    for grid_id in _SSRM_GRID_IDS:
+        register_duckdb_ssrm(grid_id, dict(_SSRM_BASE_CONFIG))
+```
+
+Because the hook runs as soon as the Dash app is instantiated, the custom endpoints are mounted before Flask serves traffic and the rest of the page can keep using config-driven grids without any manual registration elsewhere.
+
 ---
 ## Managing asset size
 

@@ -647,3 +647,9 @@ def _fetch_rows(connection: "duckdb.DuckDBPyConnection", sql: str) -> list[dict[
 
 def _execute_count(connection: "duckdb.DuckDBPyConnection", sql: str) -> int:
     return connection.sql(f"SELECT COUNT(*) FROM ({sql})").fetchone()[0]
+
+
+# Ensure the default SSRM route is registered as soon as the module loads so
+# Dash apps with callable layouts have the endpoints mounted before the first
+# request is processed.
+_register_routes_for_base(_DEFAULT_BASE)
