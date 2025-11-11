@@ -434,9 +434,12 @@ def register_duckdb_ssrm(grid_id: str, config: Mapping[str, Any]) -> str:
     if not config:
         raise ValueError("SSR configuration cannot be empty")
 
-    _ensure_duckdb_available()
-
     grid_key = str(grid_id)
+    existing = _SSRM_REGISTRY.get(grid_key)
+    if existing:
+        return "/" + existing["base"]
+
+    _ensure_duckdb_available()
     base = config.get("endpoint") or config.get("base") or config.get("base_route")
     canonical_base = _normalise_route_base(base)
     base_endpoint = "/" + canonical_base
