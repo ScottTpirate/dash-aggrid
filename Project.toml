@@ -1,6 +1,6 @@
 
-name = "DashAggrid"
-uuid = "1b08a953-4be3-4667-9a23-b4a59d1e6392"
+name = "DashAggridJs"
+uuid = "1b08a953-4be3-4667-9a23-42bdf1ba7241"
 authors = ["Gulf of Analytics <dev@goa.local>"]
 version = "0.2.3"
 

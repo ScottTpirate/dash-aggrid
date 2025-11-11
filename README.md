@@ -353,6 +353,156 @@ Enterprise features are fully supported. To enable:
 
 AgGridJS pairs a DuckDB-aware SQL builder with Dash hooks so server-side row-model grids work without manual Flask routes. Any grid that declares `configArgs={"ssrm": ...}` automatically registers JSON endpoints for data blocks and Set Filter values.
 
+### Copy/paste SSRM template
+
+Start with the following scaffolding and replace the commented fields with your paths/table names. It wires up a Dash component plus the matching asset entry so the datasource can reach the generated endpoints.
+
+```python
+# app.py
+from dash import Dash, html
+from dash_aggrid_js import AgGridJS, sql_for
+
+app = Dash(__name__)
+app.layout = html.Div(
+    AgGridJS(
+        id="ssrm-grid",
+        configKey="ssrm-template",
+        style={"height": 450},
+        configArgs={
+            "ssrm": {
+                "duckdb_path": "path/to/database.duckdb",
+                "table": "schema.table_name",    # swap for your table or view name
+                # "builder": lambda req: sql_for(req, "(SELECT * FROM my_view) src"),
+                # "endpoint": "/_aggrid/ssrm",    # override only if you need a custom prefix
+            }
+        },
+    )
+)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+```javascript
+// assets/aggrid-configs.js
+(function () {
+  window.AGGRID_CONFIGS = window.AGGRID_CONFIGS || {};
+
+  window.AGGRID_CONFIGS['ssrm-template'] = (context = {}) => {
+    const gridId = context.id || 'ssrm-grid';
+    const ssrmArgs = context.configArgs?.ssrm || {};
+    const baseEndpoint = (ssrmArgs.endpoint || '/_aggrid/ssrm').replace(/\/$/, '');
+
+    return {
+      columnDefs: [
+        { field: 'region', rowGroup: true, showRowGroup: true, filter: 'agSetColumnFilter' },
+        { field: 'category', filter: 'agSetColumnFilter' },
+        { field: 'units', type: 'numericColumn' },
+        { field: 'revenue', type: 'numericColumn', valueFormatter: ({ value }) => value?.toLocaleString() },
+      ],
+      defaultColDef: { flex: 1, sortable: true, filter: true, resizable: true },
+      groupDisplayType: 'custom',
+      rowModelType: 'serverSide',
+      cacheBlockSize: 100,
+      serverSideDatasource: {
+        getRows(params) {
+          fetch(`${baseEndpoint}/${encodeURIComponent(gridId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params.request || {}),
+          })
+            .then(async (response) => {
+              const payload = await response.json().catch(() => null);
+              if (!response.ok || !payload) {
+                throw new Error(payload?.error || `HTTP ${response.status}`);
+              }
+              params.success({
+                rowData: Array.isArray(payload.rows) ? payload.rows : [],
+                rowCount: payload.rowCount,
+              });
+            })
+            .catch((err) => {
+              console.error('AgGridJS SSRM request failed', err);
+              params.fail();
+            });
+        },
+      },
+    };
+  };
+}());
+```
+
+The `groupDisplayType: 'custom'` flag keeps grouped fields visible in the exact columns you defined. In SSRM grids the layout lives entirely inside `assets/aggrid-configs.js`, so letting AG Grid inject its own auto group column (the default behaviour) means your config’s filters, renderers, and header text never show up while grouping. Pair it with `showRowGroup: true` on whichever columns should render the grouped values.
+
+### Minimal working SSRM example
+
+Prefer to see it all running? Drop the files below into a fresh Dash project (this repo already includes `ssrm_demo.duckdb`) and run `python minimal_ssrm.py`; Dash will automatically serve the `assets/` folder.
+
+```python
+# minimal_ssrm.py
+from pathlib import Path
+from dash import Dash, html
+from dash_aggrid_js import AgGridJS
+
+app = Dash(__name__)
+app.layout = html.Div(
+    AgGridJS(
+        id="ssrm-demo",
+        configKey="ssrm-demo",
+        style={"height": 420},
+        configArgs={
+            "ssrm": {
+                "duckdb_path": str(Path("ssrm_demo.duckdb")),
+                "table": "main.sales",
+            }
+        },
+    )
+)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+```javascript
+// assets/aggrid-configs.js
+(function () {
+  window.AGGRID_CONFIGS = window.AGGRID_CONFIGS || {};
+
+  window.AGGRID_CONFIGS['ssrm-demo'] = (context = {}) => {
+    const gridId = context.id || 'ssrm-demo';
+    const ssrmArgs = context.configArgs?.ssrm || {};
+    const endpoint = (ssrmArgs.endpoint || '/_aggrid/ssrm').replace(/\/$/, '');
+
+    return {
+      columnDefs: [
+        { field: 'region', rowGroup: true, showRowGroup: true, filter: 'agSetColumnFilter' },
+        { field: 'product', filter: 'agTextColumnFilter' },
+        { field: 'quarter', maxWidth: 140, filter: 'agSetColumnFilter' },
+        { field: 'units', type: 'numericColumn', aggFunc: 'sum' },
+        { field: 'revenue', type: 'numericColumn', aggFunc: 'sum' },
+      ],
+      rowModelType: 'serverSide',
+      groupDisplayType: 'custom',
+      serverSideDatasource: {
+        getRows(params) {
+          fetch(`${endpoint}/${encodeURIComponent(gridId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params.request || {}),
+          })
+            .then((res) => res.json())
+            .then((payload) => params.success({ rowData: payload.rows || [], rowCount: payload.rowCount }))
+            .catch((err) => {
+              console.error('SSRM fetch failed', err);
+              params.fail();
+            });
+        },
+      },
+    };
+  };
+}());
+```
+
 ### 1. Configure the grid in Dash
 
 ```python
@@ -396,7 +546,7 @@ The JS registry just needs to opt the grid into SSRM so the datasource can post 
     return {
       columnDefs: [
         { field: 'order_id', headerName: 'Order ID', maxWidth: 130 },
-        { field: 'region', filter: 'agSetColumnFilter', rowGroup: true },
+        { field: 'region', filter: 'agSetColumnFilter', rowGroup: true, showRowGroup: true },
         { field: 'product', minWidth: 160, filter: 'agSetColumnFilter' },
         { field: 'category', minWidth: 150, filter: 'agSetColumnFilter' },
         { field: 'quarter', maxWidth: 140, filter: 'agSetColumnFilter' },
@@ -422,6 +572,7 @@ The JS registry just needs to opt the grid into SSRM so the datasource can post 
         enableValue: true,
       },
       autoGroupColumnDef: { minWidth: 220 },
+      groupDisplayType: 'custom',
       rowModelType: 'serverSide',
       cacheBlockSize: 100,
       sideBar: ['columns', 'filters'],
@@ -457,10 +608,30 @@ The JS registry just needs to opt the grid into SSRM so the datasource can post 
 ### 3. Notes
 
 - Multiple SSRM grids can coexist; give each a unique `id` and `configKey`. Routes are registered automatically per grid/table pair via Dash hooks—no manual Flask code required.
+- To keep grouped columns visible, set `groupDisplayType: 'custom'` and mark grouped columns with `showRowGroup: true`; otherwise AG Grid swaps in its auto group column and hides the ones defined in your config.
 - Set Filters pick up values via `/distinct` only for columns using `agSetColumnFilter` (or a Multi Filter that includes it). Add that filter type to any columns where you want distinct lookups.
 - Pivot mode currently falls back to basic SQL; if you need pivoted results you’ll need to extend `sql_for` (grouping and aggregation are supported today).
 - Custom builders receive the raw AG Grid request payload. Use `sql_for` inside the builder if you need to compose additional joins or filters.
 - You can still call `sql_for`/`distinct_sql` manually (for exports, reports, etc.) — they mirror the autogenerated queries.
+
+### How `register_duckdb_ssrm` works
+
+`register_duckdb_ssrm(grid_id, config)` is the piece that mounts the `/grid_id` and `/grid_id/distinct` Flask routes so your datasource has something to call. `AgGridJS` invokes it automatically whenever you pass `configArgs={"ssrm": ...}`, but you can also call it yourself when you need to prime routes before the Dash layout renders (for example, to reuse the same endpoint from a background worker or a custom fetcher).
+
+```python
+from dash_aggrid_js import register_duckdb_ssrm, sql_for
+
+endpoint = register_duckdb_ssrm(
+    "exports-grid",
+    {
+        "duckdb_path": "data/exports.duckdb",
+        "builder": lambda req: sql_for(req, "(SELECT * FROM exports_view) src"),
+    },
+)
+print(f"SSRM routes ready at {endpoint}/exports-grid")
+```
+
+If `register_duckdb_ssrm` never runs, the asset fetches will fail with `404` because no JSON routes exist. Make sure either the component mounts (automatic registration) or you call the helper during app startup.
 
 ---
 ## Managing asset size
@@ -478,10 +649,13 @@ The sample file stays small—only configuration objects and lightweight factori
 ## Developing the component
 
 ```bash
-npm install                # install JS dependencies (React, AG Grid, tooling)
-npm run build              # build the production bundle + regenerate Dash bindings
-python -m pip install -e . # expose the component as an editable install
-python app.py              # run the demo Dash app
+python -m venv venv              # optional but keeps Dash + CLI isolated
+source venv/bin/activate         # (Windows: venv\Scripts\activate)
+python -m pip install -r requirements.txt  # dash[dev], PyYAML, duckdb
+python -m pip install -e .       # exposes this package to Dash
+npm install                      # install JS dependencies (React, AG Grid, tooling)
+npm run build                    # build the production bundle + regenerate Dash bindings
+python app.py                    # run the demo Dash app
 ```
 
 - Component source lives in `src/lib/components/AgGridJS.jsx`.

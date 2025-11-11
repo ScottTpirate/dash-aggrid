@@ -34,3 +34,4 @@ function agjs_aggridjs(; kwargs...)
         wild_props = Symbol[]
         return Component("agjs_aggridjs", "AgGridJS", "dash_aggrid_js", available_props, wild_props; kwargs...)
 end
+

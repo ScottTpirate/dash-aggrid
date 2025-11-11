@@ -12,7 +12,7 @@ agjsAgChartsJS <- function(id=NULL, className=NULL, configArgs=NULL, options=NUL
         type = 'AgChartsJS',
         namespace = 'dash_aggrid_js',
         propNames = c('id', 'className', 'configArgs', 'options', 'optionsKey', 'style'),
-        package = 'dashAggridJS'
+        package = 'dashAggridJs'
         )
 
     structure(component, class = c('dash_component', 'list'))
