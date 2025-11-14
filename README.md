@@ -222,6 +222,7 @@ if __name__ == "__main__":
 | `filterModel`   | JS → Dash | Current filter model (`api.getFilterModel()`). |
 | `sortModel`     | JS → Dash | Simplified array of columns with active sorting (`colId`, `sort`, `sortIndex`). |
 | `editedCells`   | JS → Dash | Single-element array describing the most recent cell edit (`rowId`, `colId`, `oldValue`, `newValue`). |
+| `cellClicked`   | JS → Dash | Details about the most recent cell click (`rowId`, `rowIndex`, `colId`, `field`, `value`, `data`). |
 
 The wrapper:
 
@@ -230,6 +231,37 @@ The wrapper:
 - Emits initial `selectedRows`, `filterModel`, and `sortModel` after the grid becomes ready.
 
 Need more events? Add them to your config and call `setProps` manually.
+
+### Cell click events & overrides
+
+`cellClicked` is emitted automatically when the grid fires `onCellClicked`. If you never read this prop in Dash, nothing rerenders—so it is effectively “off” until you rely on it. When you need a custom behaviour, override the handler in your config and call `setProps` yourself:
+
+```javascript
+window.AGGRID_CONFIGS['ib-grid'] = (ctx) => ({
+  onCellClicked(event) {
+    console.log('Single click', event);
+    ctx.setProps?.({ cellClicked: buildPayload(event) });
+  },
+  onCellDoubleClicked(event) {
+    ctx.setProps?.({ cellDoubleClicked: buildPayload(event) });
+  },
+  // ...rest of the grid options
+});
+
+function buildPayload(event) {
+  const field = event?.colDef?.field ?? null;
+  return {
+    rowId: event?.data?.id ?? event?.node?.id ?? null,
+    rowIndex: event?.rowIndex ?? event?.node?.rowIndex ?? null,
+    colId: event?.column?.getColId?.() ?? field,
+    field,
+    value: event?.value ?? (field && event?.data ? event.data[field] : null),
+    data: event?.data ?? null,
+  };
+}
+```
+
+Skip the `setProps` call if you truly want to disable the bridge, or emit a different prop (e.g., `cellDoubleClicked`) and wire that up in Dash callbacks. The helper mirrors what ships in the component, so SSRM grids without explicit row IDs still get useful metadata via `rowIndex` and the raw row object.
 
 ---
 
@@ -616,7 +648,7 @@ The JS registry just needs to opt the grid into SSRM so the datasource can post 
 
 ### How `register_duckdb_ssrm` works
 
-`register_duckdb_ssrm(grid_id, config)` is the piece that mounts the `/grid_id` and `/grid_id/distinct` Flask routes so your datasource has something to call. `AgGridJS` invokes it automatically whenever you pass `configArgs={"ssrm": ...}`, but you can also call it yourself when you need to prime routes before the Dash layout renders (for example, to reuse the same endpoint from a background worker or a custom fetcher).
+`register_duckdb_ssrm(grid_id, config)` is the piece that mounts the `/grid_id` and `/grid_id/distinct` Flask routes so your datasource has something to call. The Dash component calls it for you whenever it sees `configArgs={"ssrm": ...}` — even on Dash Pages or alias IDs (`gridId` is injected into every request so the backend can remap lookups automatically). Use the helper directly only when you need to prime routes before any component renders (for example, to share the endpoint with a background job or to mount a non-default base path at startup).
 
 ```python
 from dash_aggrid_js import register_duckdb_ssrm, sql_for
@@ -631,11 +663,11 @@ endpoint = register_duckdb_ssrm(
 print(f"SSRM routes ready at {endpoint}/exports-grid")
 ```
 
-If `register_duckdb_ssrm` never runs, the asset fetches will fail with `404` because no JSON routes exist. Make sure either the component mounts (automatic registration) or you call the helper during app startup.
+If you never instantiate the component (for example, you only need the SQL helpers for exports) you can call `register_duckdb_ssrm` yourself to prime the routes the frontend will hit.
 
 #### Dash pages & callable layouts
 
-`dash-aggrid-js` now pre-registers the default `_aggrid/ssrm` routes as soon as the package is imported, so Dash Pages or callable layouts continue to benefit from automatic SSRM wiring as long as you keep the default endpoint. If you override `configArgs["ssrm"]["endpoint"|"base"|"base_route"]` you must still ensure those custom routes exist before the server handles its first request.
+`dash-aggrid-js` now pre-registers the default `_aggrid/ssrm` routes as soon as the package is imported, so Dash Pages or callable layouts continue to benefit from automatic SSRM wiring as long as you keep the default endpoint. When the browser hits `_aggrid/ssrm/<alias>` the component includes its Dash id in the request payload, allowing the server to alias `<alias>` back to the registered config automatically. If you override `configArgs["ssrm"]["endpoint"|"base"|"base_route"]` you must still ensure those custom routes exist before the server handles its first request.
 
 Add a `hooks.setup` handler when you need to prime non-default bases:
 

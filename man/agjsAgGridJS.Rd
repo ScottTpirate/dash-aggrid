@@ -10,13 +10,22 @@ AgGridJS mounts AgGridReact using configurations stored on window.AGGRID_CONFIGS
 }
 
 \usage{
-agjsAgGridJS(id=NULL, className=NULL, configArgs=NULL, configKey=NULL,
-editedCells=NULL, filterModel=NULL, rowData=NULL,
-selectedRows=NULL, sortModel=NULL, style=NULL)
+agjsAgGridJS(id=NULL, cellClicked=NULL, className=NULL, configArgs=NULL,
+configKey=NULL, editedCells=NULL, filterModel=NULL,
+rowData=NULL, selectedRows=NULL, sortModel=NULL, style=NULL)
 }
 
 \arguments{
 \item{id}{Character. The ID used to identify this component in Dash callbacks.}
+
+\item{cellClicked}{Lists containing elements 'rowid', 'rowindex', 'colid', 'field', 'value', 'data'.
+those elements have the following types:
+  - rowid (character | numeric; optional)
+  - rowindex (numeric; optional)
+  - colid (character; optional)
+  - field (character; optional)
+  - value (logical | numeric | character | named list | unnamed list; optional)
+  - data (named list; optional). Details of the most recent cell click (rowId, colId, rowIndex, data, value).}
 
 \item{className}{Character. Optional CSS class to apply to the outer grid container.}
 

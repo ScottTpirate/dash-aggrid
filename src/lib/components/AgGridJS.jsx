@@ -491,6 +491,43 @@ const buildSortModel = (api) => {
     }));
 };
 
+const normaliseFilterModel = (model) => {
+  if (!model || typeof model !== 'object') {
+    return {};
+  }
+
+  const copy = {};
+  Object.entries(model).forEach(([key, node]) => {
+    if (!node || typeof node !== 'object') {
+      return;
+    }
+    if (node.filterType === 'set' && Array.isArray(node.values) && node.values.length === 0) {
+      return;
+    }
+    copy[key] = node;
+  });
+  return copy;
+};
+
+const buildCellEventPayload = (event) => {
+  const colId = event?.column?.getColId?.() ?? event?.colDef?.field ?? null;
+  const field = event?.colDef?.field ?? null;
+  const data = event?.data ?? null;
+  const value = typeof event?.value !== 'undefined'
+    ? event.value
+    : (field && data && typeof data === 'object' ? data[field] : null);
+  return {
+    rowId: event?.data?.id ?? event?.node?.id ?? null,
+    rowIndex: typeof event?.rowIndex === 'number'
+      ? event.rowIndex
+      : (typeof event?.node?.rowIndex === 'number' ? event.node.rowIndex : null),
+    colId,
+    field,
+    value,
+    data,
+  };
+};
+
 /**
  * AgGridJS mounts AgGridReact using configurations stored on window.AGGRID_CONFIGS.
  * The component relays selection, filter, sort, and edit events back to Dash via setProps.
@@ -507,6 +544,7 @@ const AgGridJS = (props) => {
   } = props;
 
   const apiRef = useRef(null);
+  const awaitingRowDataConfigRef = useRef(!(Array.isArray(rowDataProp) && rowDataProp.length > 0));
 
   const configArgsKey = useMemo(() => {
     try {
@@ -522,14 +560,26 @@ const AgGridJS = (props) => {
     dashPropsRef.current = props;
   });
 
+  const filterModelProp = props.filterModel;
+  const filterModelKey = useMemo(() => {
+    try {
+      return JSON.stringify(filterModelProp ?? null);
+    } catch (err) {
+      console.error('AgGridJS failed to serialise filterModel prop', err);
+      return '__error__';
+    }
+  }, [filterModelProp]);
+
   const [resolvedConfig, setResolvedConfig] = useState(() => resolveConfig({
     configKey,
     id,
     configArgs,
     dashProps: props,
+    setProps,
   }));
 
   useEffect(() => {
+    awaitingRowDataConfigRef.current = !(Array.isArray(rowDataProp) && rowDataProp.length > 0);
     let cancelled = false;
     const resolveAndSet = () => {
       const config = resolveConfig({
@@ -537,6 +587,7 @@ const AgGridJS = (props) => {
         id,
         configArgs,
         dashProps: dashPropsRef.current,
+        setProps: dashPropsRef.current?.setProps,
       });
       if (!cancelled) {
         setResolvedConfig(config);
@@ -569,6 +620,26 @@ const AgGridJS = (props) => {
     };
   }, [configKey, id, configArgsKey]);
 
+  useEffect(() => {
+    if (!awaitingRowDataConfigRef.current) {
+      return;
+    }
+    if (!Array.isArray(rowDataProp) || rowDataProp.length === 0) {
+      return;
+    }
+    const config = resolveConfig({
+      configKey,
+      id,
+      configArgs,
+      dashProps: dashPropsRef.current,
+      setProps: dashPropsRef.current?.setProps,
+    });
+    if (config && typeof config === 'object') {
+      awaitingRowDataConfigRef.current = false;
+      setResolvedConfig(config);
+    }
+  }, [rowDataProp, configArgsKey, configKey, id]);
+
   if (!resolvedConfig || typeof resolvedConfig !== 'object') {
     return (
       <div id={id} className={className} style={{ ...(style || {}), padding: 8, border: '1px dashed #ccc' }}>
@@ -583,6 +654,7 @@ const AgGridJS = (props) => {
     onFilterChanged: userFilter,
     onSortChanged: userSort,
     onCellValueChanged: userEdit,
+    onCellClicked: userCellClicked,
     theme: userTheme,
     ...gridOptions
   } = resolvedConfig;
@@ -650,6 +722,42 @@ const AgGridJS = (props) => {
     setProps({ editedCells: [payload] });
   });
 
+  const onCellClicked = withDash(userCellClicked, (event) => {
+    if (!setProps) {
+      return;
+    }
+    setProps({ cellClicked: buildCellEventPayload(event) });
+  });
+
+  useEffect(() => {
+    if (!apiRef.current) {
+      return;
+    }
+    if (typeof filterModelProp === 'undefined') {
+      return;
+    }
+    let currentKey = null;
+    try {
+      currentKey = JSON.stringify(apiRef.current.getFilterModel() || null);
+    } catch (err) {
+      currentKey = null;
+    }
+    if (currentKey === filterModelKey) {
+      return;
+    }
+    try {
+      const nextModel = filterModelProp || null;
+      apiRef.current.setFilterModel(nextModel);
+      if (typeof apiRef.current.onFilterChanged === 'function') {
+        apiRef.current.onFilterChanged();
+      } else if (apiRef.current.dispatchEvent) {
+        apiRef.current.dispatchEvent({ type: 'filterChanged' });
+      }
+    } catch (err) {
+      console.error('AgGridJS failed to apply filterModel prop', err);
+    }
+  }, [filterModelKey, filterModelProp]);
+
   return (
     <div id={id} className={className} style={style}>
       <div style={{ width: '100%', height: '100%' }}>
@@ -661,6 +769,7 @@ const AgGridJS = (props) => {
           onFilterChanged={onFilterChanged}
           onSortChanged={onSortChanged}
           onCellValueChanged={onCellValueChanged}
+          onCellClicked={onCellClicked}
         />
       </div>
     </div>
@@ -724,6 +833,17 @@ AgGridJS.propTypes = {
     oldValue: PropTypes.any,
     newValue: PropTypes.any
   })),
+  /**
+   * Details of the most recent cell click (rowId, colId, rowIndex, data, value).
+   */
+  cellClicked: PropTypes.shape({
+    rowId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    rowIndex: PropTypes.number,
+    colId: PropTypes.string,
+    field: PropTypes.string,
+    value: PropTypes.any,
+    data: PropTypes.object,
+  }),
   /**
    * Row data provided directly from Dash. Overrides rowData defined in the JS config.
    */

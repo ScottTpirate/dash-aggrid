@@ -10,6 +10,14 @@ AgGridJS mounts AgGridReact using configurations stored on window.AGGRID_CONFIGS
 The component relays selection, filter, sort, and edit events back to Dash via setProps.
 Keyword arguments:
 - `id` (String; optional): The ID used to identify this component in Dash callbacks.
+- `cellClicked` (optional): Details of the most recent cell click (rowId, colId, rowIndex, data, value).. cellClicked has the following type: lists containing elements 'rowId', 'rowIndex', 'colId', 'field', 'value', 'data'.
+Those elements have the following types:
+  - `rowId` (String | Real; optional)
+  - `rowIndex` (Real; optional)
+  - `colId` (String; optional)
+  - `field` (String; optional)
+  - `value` (Bool | Real | String | Dict | Array; optional)
+  - `data` (Dict; optional)
 - `className` (String; optional): Optional CSS class to apply to the outer grid container.
 - `configArgs` (Dict | Array | String | Real | Bool | a value equal to: null; optional): Optional JSON-serialisable payload passed to config factory functions.
 - `configKey` (String; required): Key used to look up a configuration object in window.AGGRID_CONFIGS.
@@ -30,7 +38,7 @@ Those elements have the following types:
 - `style` (Dict; optional): Inline style object applied to the grid container.
 """
 function agjs_aggridjs(; kwargs...)
-        available_props = Symbol[:id, :className, :configArgs, :configKey, :editedCells, :filterModel, :rowData, :selectedRows, :sortModel, :style]
+        available_props = Symbol[:id, :cellClicked, :className, :configArgs, :configKey, :editedCells, :filterModel, :rowData, :selectedRows, :sortModel, :style]
         wild_props = Symbol[]
         return Component("agjs_aggridjs", "AgGridJS", "dash_aggrid_js", available_props, wild_props; kwargs...)
 end

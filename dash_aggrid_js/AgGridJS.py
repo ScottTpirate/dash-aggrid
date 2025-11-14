@@ -28,6 +28,24 @@ Keyword arguments:
 - id (string; optional):
     The ID used to identify this component in Dash callbacks.
 
+- cellClicked (dict; optional):
+    Details of the most recent cell click (rowId, colId, rowIndex,
+    data, value).
+
+    `cellClicked` is a dict with keys:
+
+    - rowId (string | number; optional)
+
+    - rowIndex (number; optional)
+
+    - colId (string; optional)
+
+    - field (string; optional)
+
+    - value (boolean | number | string | dict | list; optional)
+
+    - data (dict; optional)
+
 - className (string; optional):
     Optional CSS class to apply to the outer grid container.
 
@@ -98,6 +116,18 @@ Keyword arguments:
         }
     )
 
+    CellClicked = TypedDict(
+        "CellClicked",
+            {
+            "rowId": NotRequired[typing.Union[str, NumberType]],
+            "rowIndex": NotRequired[NumberType],
+            "colId": NotRequired[str],
+            "field": NotRequired[str],
+            "value": NotRequired[typing.Any],
+            "data": NotRequired[dict]
+        }
+    )
+
 
     def __init__(
         self,
@@ -110,12 +140,13 @@ Keyword arguments:
         filterModel: typing.Optional[dict] = None,
         sortModel: typing.Optional[typing.Sequence["SortModel"]] = None,
         editedCells: typing.Optional[typing.Sequence["EditedCells"]] = None,
+        cellClicked: typing.Optional["CellClicked"] = None,
         rowData: typing.Optional[typing.Sequence[dict]] = None,
         **kwargs
     ):
-        self._prop_names = ['id', 'className', 'configArgs', 'configKey', 'editedCells', 'filterModel', 'rowData', 'selectedRows', 'sortModel', 'style']
+        self._prop_names = ['id', 'cellClicked', 'className', 'configArgs', 'configKey', 'editedCells', 'filterModel', 'rowData', 'selectedRows', 'sortModel', 'style']
         self._valid_wildcard_attributes =            []
-        self.available_properties = ['id', 'className', 'configArgs', 'configKey', 'editedCells', 'filterModel', 'rowData', 'selectedRows', 'sortModel', 'style']
+        self.available_properties = ['id', 'cellClicked', 'className', 'configArgs', 'configKey', 'editedCells', 'filterModel', 'rowData', 'selectedRows', 'sortModel', 'style']
         self.available_wildcard_properties =            []
         _explicit_args = kwargs.pop('_explicit_args')
         _locals = locals()

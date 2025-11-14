@@ -12,6 +12,7 @@ import datetime as _dt
 import re
 import textwrap
 from collections.abc import Callable, Mapping
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -580,14 +581,14 @@ def _attach_routes_to_app(app: "dash.Dash", base: str, serve_ssrm, serve_distinc
 
 
 def _serve_ssrm_request(base: str, grid_id: str):
-    entry = _SSRM_REGISTRY.get(grid_id)
-    if not entry or entry["base"] != base:
-        return jsonify({"error": f"No SSRM configuration registered for grid {grid_id!r}"}), 404
-
     try:
         payload = request.get_json(force=True) or {}
     except Exception as err:  # pragma: no cover - Flask handles JSON errors
         return jsonify({"error": f"Invalid JSON payload: {err}"}), 400
+
+    entry = _resolve_entry_for_request(base, grid_id, payload)
+    if not entry:
+        return jsonify({"error": f"No SSRM configuration registered for grid {grid_id!r}"}), 404
 
     builder = entry["builder"]
 
@@ -603,7 +604,7 @@ def _serve_ssrm_request(base: str, grid_id: str):
         return jsonify({"error": f"Failed to build SSRM SQL: {err}"}), 500
 
     try:
-        with duckdb.connect(str(entry["duckdb_path"]), read_only=True) as con:
+        with _open_readonly_connection(entry) as con:
             rows = _fetch_rows(con, query_sql)
             total = _execute_count(con, count_sql)
     except Exception as err:
@@ -613,8 +614,8 @@ def _serve_ssrm_request(base: str, grid_id: str):
 
 
 def _serve_distinct_request(base: str, grid_id: str, column: str):
-    entry = _SSRM_REGISTRY.get(grid_id)
-    if not entry or entry["base"] != base:
+    entry = _resolve_entry_for_request(base, grid_id)
+    if not entry:
         return jsonify({"error": f"No SSRM configuration registered for grid {grid_id!r}"}), 404
 
     try:
@@ -623,7 +624,7 @@ def _serve_distinct_request(base: str, grid_id: str, column: str):
         return jsonify({"error": f"Failed to build distinct SQL: {err}"}), 500
 
     try:
-        with duckdb.connect(str(entry["duckdb_path"]), read_only=True) as con:
+        with _open_readonly_connection(entry) as con:
             values = [row[0] for row in con.sql(sql).fetchall()]
     except Exception as err:
         return jsonify({"error": f"DuckDB execution failed: {err}"}), 500
@@ -647,6 +648,37 @@ def _fetch_rows(connection: "duckdb.DuckDBPyConnection", sql: str) -> list[dict[
 
 def _execute_count(connection: "duckdb.DuckDBPyConnection", sql: str) -> int:
     return connection.sql(f"SELECT COUNT(*) FROM ({sql})").fetchone()[0]
+
+
+def _resolve_entry_for_request(base: str, grid_id: str, payload: Mapping[str, Any] | None = None):
+    entry = _SSRM_REGISTRY.get(grid_id)
+    if entry and entry["base"] == base:
+        return entry
+
+    alias_id = None
+    if payload:
+        alias_id = payload.get("gridId") or payload.get("grid_id")
+        if alias_id is not None:
+            alias_id = str(alias_id)
+
+    if alias_id:
+        alias_entry = _SSRM_REGISTRY.get(alias_id)
+        if alias_entry and alias_entry["base"] == base:
+            # Cache the alias for future requests (including distinct fetches)
+            _SSRM_REGISTRY[grid_id] = alias_entry
+            print(f"[AgGridJS] SSRM alias {grid_id} -> {alias_id}")
+            return alias_entry
+
+    return None
+
+
+@contextmanager
+def _open_readonly_connection(entry: dict[str, Any]):
+    con = duckdb.connect(str(entry["duckdb_path"]), read_only=True)
+    try:
+        yield con
+    finally:
+        con.close()
 
 
 # Ensure the default SSRM route is registered as soon as the module loads so

@@ -3,6 +3,7 @@ from __future__ import print_function as _
 import os as _os
 import sys as _sys
 import json
+from collections.abc import Mapping as _Mapping
 
 import dash as _dash
 
@@ -106,10 +107,27 @@ if "AgGridJS" in globals():
         grid_id = getattr(self, "id", None)
         config_args = getattr(self, "configArgs", None)
 
-        if isinstance(grid_id, (str, int)) and isinstance(config_args, dict):
+        if isinstance(grid_id, (str, int)) and isinstance(config_args, _Mapping):
+            if not isinstance(config_args, dict):
+                config_args = dict(config_args)
+                setattr(self, "configArgs", config_args)
+
             ssrm_cfg = config_args.get("ssrm")
-            if isinstance(ssrm_cfg, dict):
-                endpoint = register_duckdb_ssrm(str(grid_id), ssrm_cfg)
+            if isinstance(ssrm_cfg, _Mapping):
+                if not isinstance(ssrm_cfg, dict):
+                    ssrm_cfg = dict(ssrm_cfg)
+                    config_args["ssrm"] = ssrm_cfg
+
+                target_grid_id = ssrm_cfg.get("gridId")
+                target_grid_id = (
+                    str(target_grid_id)
+                    if isinstance(target_grid_id, (str, int)) and str(target_grid_id)
+                    else None
+                )
+                registry_grid_id = target_grid_id or str(grid_id)
+
+                endpoint = register_duckdb_ssrm(registry_grid_id, ssrm_cfg)
+                ssrm_cfg.setdefault("gridId", registry_grid_id)
                 ssrm_cfg.setdefault("endpoint", endpoint)
                 ssrm_cfg.setdefault("distinctEndpoint", f"{endpoint.rstrip('/')}/distinct")
 
