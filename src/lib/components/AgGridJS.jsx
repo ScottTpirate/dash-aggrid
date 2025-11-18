@@ -6,10 +6,12 @@ import {
   AllCommunityModule,
   TextFilterModule,
   ColumnAutoSizeModule,
+  ValidationModule,
   themeQuartz,
   themeAlpine,
   BeanStub,
 } from 'ag-grid-community';
+import * as EnterpriseModules from 'ag-grid-enterprise';
 
 const isDevEnv = typeof process !== 'undefined'
   ? process?.env?.NODE_ENV !== 'production'
@@ -202,23 +204,23 @@ const ensureModulesRegistered = () => {
   if (modulesRegistered) return;
 
   try {
-    ModuleRegistry.registerModules([AllCommunityModule, TextFilterModule, ColumnAutoSizeModule]);
+    ModuleRegistry.registerModules([AllCommunityModule, TextFilterModule, ColumnAutoSizeModule, ValidationModule]);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('AgGridJS failed to register AllCommunityModule', err);
   }
   try {
-    let enterprise = null;
-    try {
-      // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-      enterprise = require('ag-grid-enterprise');
-    } catch (err) {
-      enterprise = null;
-    }
+    const enterprise = EnterpriseModules;
 
-    if (!enterprise) {
-      throw new Error('ag-grid-enterprise not found');
-    }
+    const missingModules = [];
+    const flagModule = (key) => {
+      if (!enterprise[key]) {
+        missingModules.push(key);
+      }
+    };
+    flagModule('AllEnterpriseModule');
+    flagModule('RowGroupingModule');
+    flagModule('PivotModule');
 
     const additional = [];
     const addIfPresent = (module) => {
@@ -227,7 +229,6 @@ const ensureModulesRegistered = () => {
       }
     };
 
-    addIfPresent(enterprise.AllEnterpriseModule);
     addIfPresent(enterprise.MenuModule);
     addIfPresent(enterprise.ColumnMenuModule);
     addIfPresent(enterprise.ContextMenuModule);
@@ -237,6 +238,7 @@ const ensureModulesRegistered = () => {
     addIfPresent(enterprise.FiltersToolPanelModule);
     addIfPresent(enterprise.NewFiltersToolPanelModule);
     addIfPresent(enterprise.RowGroupingModule);
+    addIfPresent(enterprise.PivotModule);
     addIfPresent(enterprise.RowGroupingPanelModule);
     addIfPresent(enterprise.GroupFilterModule);
     addIfPresent(enterprise.RowSelectionModule);
@@ -271,6 +273,16 @@ const ensureModulesRegistered = () => {
 
     if (additional.length) {
       ModuleRegistry.registerModules(additional);
+    }
+
+    if (isDevEnv) {
+      const names = additional.map((module) => module?.moduleName).filter(Boolean);
+      if (names.length) {
+        console.info('[AgGridJS] Registered enterprise modules:', names);
+      }
+      if (missingModules.length) {
+        console.warn('[AgGridJS] Missing enterprise modules from bundle:', missingModules);
+      }
     }
 
     registerColumnMenuGuard(enterprise);
@@ -658,11 +670,12 @@ const AgGridJS = (props) => {
     theme: userTheme,
     ...gridOptions
   } = resolvedConfig;
-  const theme = userTheme || themeQuartz;
 
   const finalGridOptions = Array.isArray(rowDataProp)
     ? { ...gridOptions, rowData: rowDataProp }
     : { ...gridOptions };
+  const derivedTheme = typeof userTheme === 'undefined' ? 'legacy' : userTheme;
+  finalGridOptions.theme = derivedTheme;
 
   if (isDevEnv) {
     const validationKey = configKey || id || 'aggrid-js-grid';
@@ -763,7 +776,6 @@ const AgGridJS = (props) => {
       <div style={{ width: '100%', height: '100%' }}>
         <AgGridReact
           {...gridOptionsWithSsrm}
-          theme={theme}
           onGridReady={onGridReady}
           onSelectionChanged={onSelectionChanged}
           onFilterChanged={onFilterChanged}

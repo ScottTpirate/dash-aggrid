@@ -2,8 +2,6 @@
 
 dash-aggrid-js (Python import: `dash_aggrid_js`) is a deliberately thin Dash wrapper around **AgGridReact**. It mounts the AG Grid React component directly, so you can copy examples from the AG Grid docs, drop them into a browser-side config registry, and the grid just works inside Dash.
 
-> ℹ️ The legacy `dash_aggrid` import still works and simply re-exports `dash_aggrid_js`, so existing apps keep running while you upgrade.
-
 > ⚠️ **Pick one wrapper per app.** AgGridJS is not meant to run alongside `dash-ag-grid`; loading both introduces duplicate CSS, overlapping themes, and conflicting event glue. Choose one approach per Dash project.
 
 ---
@@ -313,12 +311,23 @@ window.AGGRID_CONFIGS['inventory-grid'] = ({ configArgs }) => ({
     borderRadius: 10
   })
 });
+
+// Optional: request specific CSS themes for this grid
+window.AGGRID_CONFIGS['inventory-grid'].stylesheets = [
+  'base',                  // ag-grid.css
+  'quartz-dark',           // ag-theme-quartz-dark.css
+  '/assets/aggrid-overrides.css',
+];
 ```
 
 - `style` still controls the container height/width. Set the height explicitly so the grid has room to render.
-- `className` is optional and can be used for extra layout styling. Theme classes are no longer required when using the theming API.
+- `className` is optional and can be used for extra layout styling. If you forget to include an `ag-theme-*` class, AgGridJS automatically appends `ag-theme-quartz` so the grid always has a valid theme root.
 - If you want to keep the legacy CSS themes instead, set `theme: 'legacy'` in your registry entry and include the old CSS manually.
 - Integrated charts rely on AG Grid Enterprise. If the module is not present, the grid will skip chart creation automatically.
+
+### CSS requirements
+
+AgGridJS does **not** embed AG Grid's CSS. Add the base stylesheet plus your preferred theme through Dash's asset pipeline or `external_stylesheets`. For example, copy the files from `node_modules/ag-grid-community/styles/` into `assets/` and reference them in `app = Dash(__name__, external_stylesheets=["/assets/ag-grid.css", "/assets/ag-theme-quartz.css"])`. Without these files, AG Grid falls back to default CSS variables and logs warnings about unset `--ag-*` tokens.
 
 ## Standalone AG Charts
 
