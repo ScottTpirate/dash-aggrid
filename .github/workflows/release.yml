@@ -33,7 +33,7 @@ jobs:
       - name: Install Python build dependencies
         run: |
           python -m pip install -U pip
-          python -m pip install "dash>=2"
+          python -m pip install "dash>=2" pyyaml
 
       - name: Verify tag matches package version
         working-directory: dash-aggrid
