@@ -31,7 +31,7 @@ dev = [
 test = [
   "pytest>=7.4",
   "dash[testing]>=2.14",
-  "selenium>=4.15",
+  "selenium>=4.1,<4.3",
 ]
 
 [project.urls]
