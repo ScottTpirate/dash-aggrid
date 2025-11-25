@@ -18,7 +18,7 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = [
-  "dash>=2.0.0",
+  "dash>=3.3",
 ]
 dynamic = ["version"]
 
@@ -30,8 +30,9 @@ dev = [
 ]
 test = [
   "pytest>=7.4",
-  "dash[testing]>=2.14",
+  "dash[testing]>=3.3",
   "selenium>=4.1,<4.3",
+  "duckdb>=1.4.2,<2.0",
 ]
 
 [project.urls]
