@@ -42,7 +42,7 @@ Keyword arguments:
 
 - optionsKey (string; optional):
     Key used to look up chart options from window.AGCHART_CONFIGS."""
-    _children_props = []
+    _children_props: typing.List[str] = []
     _base_nodes = ['children']
     _namespace = 'dash_aggrid_js'
     _type = 'AgChartsJS'

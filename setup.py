@@ -1,34 +1,42 @@
 import json
-from setuptools import setup
 from pathlib import Path
 
-here = Path(__file__).parent
-with open('package.json') as f:
-    package = json.load(f)
-long_description = (here / 'README.md').read_text()
+from setuptools import setup
 
-package_name = package["name"].replace(" ", "_").replace("-", "_")
+here = Path(__file__).parent
+about = {}
+about_path = here / "dash_aggrid_js" / "__about__.py"
+exec(about_path.read_text(), about)
+__version__ = about["__version__"]
+
+with open("package.json") as f:
+    package = json.load(f)
+long_description = (here / "README.md").read_text()
 
 setup(
-    name="dash-aggrid-js",
-    version=package["version"],
-    author=package['author'],
-    packages=['dash_aggrid_js', 'dash_aggrid'],
+    name=package["name"],
+    version=__version__,
+    author=package["author"],
+    packages=["dash_aggrid_js", "dash_aggrid"],
     include_package_data=True,
-    license=package['license'],
-    description=package.get('description', package_name),
+    license=package["license"],
+    description=package.get("description", package["name"]),
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        'dash>=2.0.0',
+        "dash>=2.0.0",
     ],
-    python_requires='>=3.8',
-    url='https://github.com/ScottTpirate/dash-aggrid',
-    project_urls={
-        'Source': 'https://github.com/ScottTpirate/dash-aggrid',
-        'Tracker': 'https://github.com/ScottTpirate/dash-aggrid/issues',
+    extras_require={
+        "dev": ["pre-commit>=3.6", "build>=1.0", "twine>=4.0"],
+        "test": ["pytest>=7.4", "dash[testing]>=2.14", "selenium>=4.15"],
     },
-    classifiers = [
-        'Framework :: Dash',
-    ],    
+    python_requires=">=3.8",
+    url="https://github.com/ScottTpirate/dash-aggrid",
+    project_urls={
+        "Source": "https://github.com/ScottTpirate/dash-aggrid",
+        "Tracker": "https://github.com/ScottTpirate/dash-aggrid/issues",
+    },
+    classifiers=[
+        "Framework :: Dash",
+    ],
 )

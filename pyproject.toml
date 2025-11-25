@@ -1,3 +1,47 @@
 [build-system]
 requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "dash-aggrid-js"
+description = "Tiny Dash wrapper that mounts AgGridReact using a JS config registry"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+  { name = "Gulf of Analytics", email = "dev@goa.local" },
+]
+classifiers = [
+  "Framework :: Dash",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = [
+  "dash>=2.0.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+  "pre-commit>=3.6",
+  "build>=1.0",
+  "twine>=4.0",
+]
+test = [
+  "pytest>=7.4",
+  "dash[testing]>=2.14",
+  "selenium>=4.15",
+]
+
+[project.urls]
+Homepage = "https://github.com/ScottTpirate/dash-aggrid"
+Source = "https://github.com/ScottTpirate/dash-aggrid"
+Tracker = "https://github.com/ScottTpirate/dash-aggrid/issues"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["dash_aggrid_js", "dash_aggrid"]
+
+[tool.setuptools.dynamic]
+version = { file = "dash_aggrid_js/VERSION" }

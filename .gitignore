@@ -230,6 +230,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.idea/
+*.iml
+.DS_Store
+src/.DS_Store
 
 # Spyder project settings
 .spyderproject

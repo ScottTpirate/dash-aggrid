@@ -349,6 +349,24 @@ const setApiInstance = (gridId, api) => {
   };
 };
 
+const normaliseRegisterProps = (raw) => {
+  if (!raw) {
+    return new Set();
+  }
+  if (Array.isArray(raw)) {
+    return new Set(
+      raw
+        .map((v) => (typeof v === 'string' ? v.trim() : ''))
+        .filter((v) => !!v)
+    );
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    return trimmed ? new Set([trimmed]) : new Set();
+  }
+  return new Set();
+};
+
 const withSsrmFilterValues = (options, gridId, configArgs) => {
   if (!gridId || !configArgs || !configArgs.ssrm || !options) {
     return options;
@@ -553,7 +571,13 @@ const AgGridJS = (props) => {
     configArgs = null,
     rowData: rowDataProp = null,
     setProps,            // injected by Dash
+    registerProps = null,
   } = props;
+
+  const registeredProps = useMemo(() => normaliseRegisterProps(registerProps), [registerProps]);
+  const wantsProp = (propName) =>
+    registeredProps.has(propName)
+    || Object.prototype.hasOwnProperty.call(props, propName);
 
   const apiRef = useRef(null);
   const awaitingRowDataConfigRef = useRef(!(Array.isArray(rowDataProp) && rowDataProp.length > 0));
@@ -589,6 +613,8 @@ const AgGridJS = (props) => {
     dashProps: props,
     setProps,
   }));
+
+  const shouldSyncCellClicked = wantsProp('cellClicked');
 
   useEffect(() => {
     awaitingRowDataConfigRef.current = !(Array.isArray(rowDataProp) && rowDataProp.length > 0);
@@ -723,7 +749,7 @@ const AgGridJS = (props) => {
   const onSortChanged = withDash(userSort, syncSortModel);
 
   const onCellValueChanged = withDash(userEdit, (event) => {
-    if (!setProps) {
+    if (!setProps || !wantsProp('editedCells')) {
       return;
     }
     const payload = {
@@ -735,12 +761,16 @@ const AgGridJS = (props) => {
     setProps({ editedCells: [payload] });
   });
 
-  const onCellClicked = withDash(userCellClicked, (event) => {
-    if (!setProps) {
-      return;
+  const dashCellClickedHandler = shouldSyncCellClicked
+    ? (event) => {
+      if (!setProps) {
+        return;
+      }
+      setProps({ cellClicked: buildCellEventPayload(event) });
     }
-    setProps({ cellClicked: buildCellEventPayload(event) });
-  });
+    : null;
+
+  const onCellClicked = withDash(userCellClicked, dashCellClickedHandler);
 
   useEffect(() => {
     if (!apiRef.current) {
@@ -817,6 +847,15 @@ AgGridJS.propTypes = {
     PropTypes.oneOf([null]),
   ]),
   /**
+   * Optional list of extra Dash props this grid is allowed to emit (e.g. ["cellDoubleClicked"]).
+   * These are appended to the component's available_properties on the Python side.
+   */
+  registerProps: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.string),
+    PropTypes.string,
+    PropTypes.oneOf([null]),
+  ]),
+  /**
    * Dash-assigned callback for reporting property changes to Dash.
    */
   setProps: PropTypes.func,
@@ -836,26 +875,6 @@ AgGridJS.propTypes = {
     sort: PropTypes.oneOf(['asc', 'desc']),
     sortIndex: PropTypes.number
   })),
-  /**
-   * Details of the most recent cell edit (rowId, colId, oldValue, newValue).
-   */
-  editedCells: PropTypes.arrayOf(PropTypes.shape({
-    rowId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    colId: PropTypes.string,
-    oldValue: PropTypes.any,
-    newValue: PropTypes.any
-  })),
-  /**
-   * Details of the most recent cell click (rowId, colId, rowIndex, data, value).
-   */
-  cellClicked: PropTypes.shape({
-    rowId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    rowIndex: PropTypes.number,
-    colId: PropTypes.string,
-    field: PropTypes.string,
-    value: PropTypes.any,
-    data: PropTypes.object,
-  }),
   /**
    * Row data provided directly from Dash. Overrides rowData defined in the JS config.
    */

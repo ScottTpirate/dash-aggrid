@@ -10,22 +10,13 @@ AgGridJS mounts AgGridReact using configurations stored on window.AGGRID_CONFIGS
 }
 
 \usage{
-agjsAgGridJS(id=NULL, cellClicked=NULL, className=NULL, configArgs=NULL,
-configKey=NULL, editedCells=NULL, filterModel=NULL,
-rowData=NULL, selectedRows=NULL, sortModel=NULL, style=NULL)
+agjsAgGridJS(id=NULL, className=NULL, configArgs=NULL, configKey=NULL,
+filterModel=NULL, registerProps=NULL, rowData=NULL,
+selectedRows=NULL, sortModel=NULL, style=NULL)
 }
 
 \arguments{
 \item{id}{Character. The ID used to identify this component in Dash callbacks.}
-
-\item{cellClicked}{Lists containing elements 'rowid', 'rowindex', 'colid', 'field', 'value', 'data'.
-those elements have the following types:
-  - rowid (character | numeric; optional)
-  - rowindex (numeric; optional)
-  - colid (character; optional)
-  - field (character; optional)
-  - value (logical | numeric | character | named list | unnamed list; optional)
-  - data (named list; optional). Details of the most recent cell click (rowId, colId, rowIndex, data, value).}
 
 \item{className}{Character. Optional CSS class to apply to the outer grid container.}
 
@@ -33,14 +24,10 @@ those elements have the following types:
 
 \item{configKey}{Character. Key used to look up a configuration object in window.AGGRID_CONFIGS.}
 
-\item{editedCells}{List of lists containing elements 'rowid', 'colid', 'oldvalue', 'newvalue'.
-those elements have the following types:
-  - rowid (character | numeric; optional)
-  - colid (character; optional)
-  - oldvalue (logical | numeric | character | named list | unnamed list; optional)
-  - newvalue (logical | numeric | character | named list | unnamed list; optional)s. Details of the most recent cell edit (rowId, colId, oldValue, newValue).}
-
 \item{filterModel}{Named list. Current AG Grid filter model. Populated by the component.}
+
+\item{registerProps}{List of characters | character | a value equal to: null. Optional list of extra Dash props this grid is allowed to emit (e.g. ["cellDoubleClicked"]).
+These are appended to the component's available_properties on the Python side.}
 
 \item{rowData}{List of named lists. Row data provided directly from Dash. Overrides rowData defined in the JS config.}
 

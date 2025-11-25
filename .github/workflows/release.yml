@@ -1,0 +1,87 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: dash-aggrid/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Verify tag matches package version
+        working-directory: dash-aggrid
+        run: |
+          python - <<'PY'
+from dash_aggrid_js.__about__ import __version__
+from pathlib import Path
+import json
+import os
+
+tag = os.environ.get("GITHUB_REF_NAME")
+if not tag:
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_path and Path(event_path).exists():
+        event = json.loads(Path(event_path).read_text())
+        tag = event.get("release", {}).get("tag_name")
+
+tag = tag or ""
+expected = f"v{__version__}"
+if tag != expected:
+    raise SystemExit(f"Tag {tag!r} does not match package version v{__version__}")
+print(f"Tag {tag} matches package version {__version__}")
+PY
+
+      - name: Install JS deps and build
+        working-directory: dash-aggrid
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install Python package (test extras)
+        working-directory: dash-aggrid
+        run: |
+          python -m pip install -U pip
+          python -m pip install .[test]
+
+      - name: Run tests
+        working-directory: dash-aggrid
+        run: pytest
+
+      - name: Build sdist and wheel
+        working-directory: dash-aggrid
+        run: |
+          python -m pip install -U pip build
+          python -m build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifacts
+          path: dash-aggrid/dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.12.2

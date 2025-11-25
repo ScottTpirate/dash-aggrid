@@ -1,9 +1,9 @@
 # AUTO GENERATED FILE - DO NOT EDIT
 
 #' @export
-agjsAgGridJS <- function(id=NULL, cellClicked=NULL, className=NULL, configArgs=NULL, configKey=NULL, editedCells=NULL, filterModel=NULL, rowData=NULL, selectedRows=NULL, sortModel=NULL, style=NULL) {
+agjsAgGridJS <- function(id=NULL, className=NULL, configArgs=NULL, configKey=NULL, filterModel=NULL, registerProps=NULL, rowData=NULL, selectedRows=NULL, sortModel=NULL, style=NULL) {
     
-    props <- list(id=id, cellClicked=cellClicked, className=className, configArgs=configArgs, configKey=configKey, editedCells=editedCells, filterModel=filterModel, rowData=rowData, selectedRows=selectedRows, sortModel=sortModel, style=style)
+    props <- list(id=id, className=className, configArgs=configArgs, configKey=configKey, filterModel=filterModel, registerProps=registerProps, rowData=rowData, selectedRows=selectedRows, sortModel=sortModel, style=style)
     if (length(props) > 0) {
         props <- props[!vapply(props, is.null, logical(1))]
     }
@@ -11,7 +11,7 @@ agjsAgGridJS <- function(id=NULL, cellClicked=NULL, className=NULL, configArgs=N
         props = props,
         type = 'AgGridJS',
         namespace = 'dash_aggrid_js',
-        propNames = c('id', 'cellClicked', 'className', 'configArgs', 'configKey', 'editedCells', 'filterModel', 'rowData', 'selectedRows', 'sortModel', 'style'),
+        propNames = c('id', 'className', 'configArgs', 'configKey', 'filterModel', 'registerProps', 'rowData', 'selectedRows', 'sortModel', 'style'),
         package = 'dashAggridJs'
         )
 

@@ -11,6 +11,31 @@ import dash as _dash
 from ._imports_ import *
 from ._imports_ import __all__
 
+_DEFAULT_EXTRA_PROPS: tuple[str, ...] = ()
+
+
+def _normalise_props(props) -> list[str]:
+    if props is None:
+        return []
+    if isinstance(props, str):
+        return [props]
+    try:
+        items = list(props)
+    except Exception:
+        return []
+    return [p for p in items if isinstance(p, str)]
+
+
+def set_default_props(props) -> None:
+    """
+    Set default extra Dash props to append to every AgGridJS.
+
+    Useful for common events (e.g., "cellDoubleClicked") so individual grids
+    can omit registerProps.
+    """
+    global _DEFAULT_EXTRA_PROPS
+    _DEFAULT_EXTRA_PROPS = tuple(dict.fromkeys(_normalise_props(props)))
+
 try:
     from ._imports_ import __dash_components__
 except ImportError:  # dash-generate-components < 2.x
@@ -21,6 +46,8 @@ from .ssrm import distinct_sql, quote_identifier, register_duckdb_ssrm, sql_for
 for _extra in ("sql_for", "distinct_sql", "quote_identifier", "register_duckdb_ssrm"):
     if _extra not in __all__:
         __all__.append(_extra)
+if "set_default_props" not in __all__:
+    __all__.append("set_default_props")
 
 if not hasattr(_dash, '__plotly_dash') and not hasattr(_dash, 'development'):
     print('Dash was not successfully imported. '
@@ -34,7 +61,11 @@ with open(_filepath) as f:
     package = json.load(f)
 
 package_name = package['name'].replace(' ', '_').replace('-', '_')
-__version__ = package['version']
+
+try:
+    from .__about__ import __version__  # single source of truth
+except Exception:  # pragma: no cover - fallback for edge import cases
+    __version__ = package['version']
 
 _current_path = _os.path.dirname(_os.path.abspath(__file__))
 
@@ -102,7 +133,24 @@ if "AgGridJS" in globals():
     _aggrid_original_init = AgGridJS.__init__
 
     def _aggrid_ssrm_init(self, *args, **kwargs):
+        register_props_arg = kwargs.get("registerProps")
+        register_props_explicit = "registerProps" in kwargs
+        default_props = list(_DEFAULT_EXTRA_PROPS)
+        combined_props = list(dict.fromkeys(_normalise_props(register_props_arg) + default_props))
+
+        if not register_props_explicit and default_props:
+            kwargs["registerProps"] = default_props
+
         result = _aggrid_original_init(self, *args, **kwargs)
+
+        if combined_props:
+            current = list(getattr(self, "available_properties", []) or [])
+            seen = set(current)
+            for prop in combined_props:
+                if prop not in seen:
+                    current.append(prop)
+                    seen.add(prop)
+            self.available_properties = current
 
         grid_id = getattr(self, "id", None)
         config_args = getattr(self, "configArgs", None)

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/dash_aggrid.iml" filepath="$PROJECT_DIR$/.idea/dash_aggrid.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dash-aggrid.iml" filepath="$PROJECT_DIR$/.idea/dash-aggrid.iml" />
     </modules>
   </component>
 </project>
