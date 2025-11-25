@@ -36,7 +36,6 @@ jobs:
           python -m pip install "dash>=2" pyyaml
 
       - name: Verify tag matches package version
-        working-directory: dash-aggrid
         run: |
           python - <<'PY'
           from dash_aggrid_js.__about__ import __version__
@@ -84,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-artifacts
-          path: dash-aggrid/dist/*
+          path: dist/*
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.12.2
