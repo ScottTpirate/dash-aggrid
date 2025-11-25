@@ -6,7 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## Unreleased
 ### Added
+- (none)
+
+## 0.4.1 - 2025-11-25
+### Added
 - `set_default_props([...])` helper to apply a default registerProps list across all grids.
+
+### Changed
+- Release workflow now runs on published GitHub Releases (with manual dispatch) instead of tag pushes.
+- Fixed Node cache path in CI/Release workflows so dependency caching resolves correctly.
 
 ## 0.4.0 - 2025-11-25
 ### Added
