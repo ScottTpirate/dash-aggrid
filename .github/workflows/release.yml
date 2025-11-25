@@ -36,24 +36,24 @@ jobs:
         working-directory: dash-aggrid
         run: |
           python - <<'PY'
-from dash_aggrid_js.__about__ import __version__
-from pathlib import Path
-import json
-import os
+          from dash_aggrid_js.__about__ import __version__
+          from pathlib import Path
+          import json
+          import os
 
-tag = os.environ.get("GITHUB_REF_NAME")
-if not tag:
-    event_path = os.environ.get("GITHUB_EVENT_PATH")
-    if event_path and Path(event_path).exists():
-        event = json.loads(Path(event_path).read_text())
-        tag = event.get("release", {}).get("tag_name")
+          tag = os.environ.get("GITHUB_REF_NAME")
+          if not tag:
+              event_path = os.environ.get("GITHUB_EVENT_PATH")
+              if event_path and Path(event_path).exists():
+                  event = json.loads(Path(event_path).read_text())
+                  tag = event.get("release", {}).get("tag_name")
 
-tag = tag or ""
-expected = f"v{__version__}"
-if tag != expected:
-    raise SystemExit(f"Tag {tag!r} does not match package version v{__version__}")
-print(f"Tag {tag} matches package version {__version__}")
-PY
+          tag = tag or ""
+          expected = f"v{__version__}"
+          if tag != expected:
+              raise SystemExit(f"Tag {tag!r} does not match package version v{__version__}")
+          print(f"Tag {tag} matches package version {__version__}")
+          PY
 
       - name: Install JS deps and build
         working-directory: dash-aggrid
