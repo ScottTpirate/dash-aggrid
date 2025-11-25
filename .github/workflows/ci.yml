@@ -30,15 +30,15 @@ jobs:
           cache: "pip"
 
       - name: Install JS deps and build
-        working-directory: dash-aggrid
+        working-directory: .
         run: |
           npm ci
           npm run build
 
       - name: Install Python package (test extras)
-        working-directory: dash-aggrid
+        working-directory: .
         run: python -m pip install .[test]
 
       - name: Run tests
-        working-directory: dash-aggrid
+        working-directory: .
         run: pytest
