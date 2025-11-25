@@ -6,4 +6,4 @@ We follow the Contributor Covenant 2.1.
 - Welcome feedback; critique ideas, not people.
 - Resolve conflicts with empathy; escalate to maintainers when needed.
 
-Contact: dev@goa.local for any Code of Conduct concerns.
+Contact: skilgore@landmarktx.com for any Code of Conduct concerns.

@@ -1,6 +1,6 @@
 {
   "name": "dash-aggrid-js",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Tiny Dash wrapper that mounts AgGridReact using a JS config registry",
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "build": "npm run build:js && npm run build:backends",
     "build:activated": "npm run build:js && npm run build:backends-activated"
   },
-  "author": "Gulf of Analytics <dev@goa.local>",
+  "author": "Scott Kilgore <skilgore@landmarktx.com>",
   "license": "MIT",
   "dependencies": {
     "ag-charts-community": "^12.3.1",

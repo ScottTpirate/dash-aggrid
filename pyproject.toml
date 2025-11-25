@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [
-  { name = "Gulf of Analytics", email = "dev@goa.local" },
+  { name = "Scott Kilgore", email = "skilgore@landmarktx.com" },
 ]
 classifiers = [
   "Framework :: Dash",

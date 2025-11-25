@@ -1,8 +1,8 @@
 
 name = "DashAggridJs"
 uuid = "1b08a953-4be3-4667-9a23-42bdf1ba7241"
-authors = ["Gulf of Analytics <dev@goa.local>"]
-version = "0.4.4"
+authors = ["Scott Kilgore <skilgore@landmarktx.com>"]
+version = "0.4.5"
 
 [deps]
 Dash = "1b08a953-4be3-4667-9a23-3db579824955"

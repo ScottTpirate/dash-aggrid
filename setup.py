@@ -16,7 +16,8 @@ long_description = (here / "README.md").read_text()
 setup(
     name=package["name"],
     version=__version__,
-    author=package["author"],
+    author="Scott Kilgore",
+    author_email="skilgore@landmarktx.com",
     packages=["dash_aggrid_js", "dash_aggrid"],
     include_package_data=True,
     license=package["license"],
