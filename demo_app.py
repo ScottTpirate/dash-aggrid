@@ -2,7 +2,8 @@ import json
 from pathlib import Path
 
 import duckdb
-from dash import Dash, Input, Output, dcc, html
+from dash import Dash, Input, Output, State, dcc, html
+from dash.exceptions import PreventUpdate
 
 from dash_aggrid_js import AgChartsJS, AgGridJS
 from sample_data import ANALYTICS_ROWS, INVENTORY_ROWS, SALES_ROWS, SSRM_ROWS
@@ -61,6 +62,7 @@ app.title = "AgGridJS Feature Demo"
 
 app.layout = html.Div(
     [
+        dcc.Store(id="inventory-click-store"),
         html.H2("AgGridJS Demo"),
         html.P(
             "Two independent grids sharing the same wrapper. The feature grid uses AG Grid's "
@@ -93,6 +95,7 @@ app.layout = html.Div(
                             configKey="feature-grid",
                             rowData=INVENTORY_ROWS,
                             style={"height": "420px"},
+                            registerProps=["cellClicked"],
                         ),
                         html.Small(
                             "Theme: Alpine (custom accent & rounded corners)",
@@ -101,6 +104,20 @@ app.layout = html.Div(
                         html.Pre(
                             id="inventory-log",
                             style={"whiteSpace": "pre-wrap", "marginTop": "0.75rem", "fontSize": "0.85rem"},
+                        ),
+                        html.Div(
+                            [
+                                html.Strong("Cell clicks"),
+                                html.Pre(
+                                    id="inventory-click-display",
+                                    style={
+                                        "whiteSpace": "pre-wrap",
+                                        "marginTop": "0.5rem",
+                                        "fontSize": "0.85rem",
+                                    },
+                                ),
+                            ],
+                            style={"marginTop": "0.5rem"},
                         ),
                     ],
                     style={"flex": 1, "minWidth": "320px"},
@@ -227,6 +244,39 @@ def show_inventory_events(selected_rows, filter_model, sort_model, edited_cells)
         "editedCells": edited_cells or [],
     }
     return json.dumps(payload, indent=2)
+
+
+@app.callback(
+    Output("inventory-click-store", "data"),
+    Input("inventory-grid", "cellClicked"),
+    State("inventory-click-store", "data"),
+    prevent_initial_call=True,
+)
+def track_inventory_clicks(cell_clicked, stored):
+    if not cell_clicked:
+        raise PreventUpdate
+    stored = stored or {}
+    count = int(stored.get("count") or 0) + 1
+    per_cell = stored.get("perCell") or {}
+    row_id = cell_clicked.get("rowId") or cell_clicked.get("rowIndex")
+    col_id = cell_clicked.get("field") or cell_clicked.get("colId")
+    key = f"{row_id}::{col_id}"
+    per_cell[key] = int(per_cell.get(key) or 0) + 1
+    return {"count": count, "last": cell_clicked, "perCell": per_cell, "lastKey": key, "lastKeyCount": per_cell[key]}
+
+
+@app.callback(Output("inventory-click-display", "children"), Input("inventory-click-store", "data"))
+def show_inventory_clicks(data):
+    if not data:
+        return "Click any cell to see details."
+    return json.dumps(
+        {
+            "clicks_total": data.get("count", 0),
+            "clicks_for_last_cell": data.get("lastKeyCount", 0),
+            "last": data.get("last"),
+        },
+        indent=2,
+    )
 
 
 @app.callback(Output("sales-log", "children"), Input("sales-grid", "selectedRows"))

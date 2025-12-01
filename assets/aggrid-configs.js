@@ -56,6 +56,7 @@
         maximumFractionDigits: 0,
       });
       const inventory = context?.dashProps?.rowData || [];
+      const setProps = context?.setProps;
       return {
         rowData: inventory,
         columnDefs: [
