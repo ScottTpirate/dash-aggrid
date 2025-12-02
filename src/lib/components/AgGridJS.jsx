@@ -12,6 +12,7 @@ import {
   BeanStub,
 } from 'ag-grid-community';
 import * as EnterpriseModules from 'ag-grid-enterprise';
+import componentMetadata from '../../../dash_aggrid_js/metadata.json';
 
 const isDevEnv = typeof process !== 'undefined'
   ? process?.env?.NODE_ENV !== 'production'
@@ -147,7 +148,7 @@ class ColumnMenuGuard extends BeanStub {
   }
 }
 
-let modulesRegistered = false;
+const registeredModuleNames = new Set();
 let menuGuardRegistered = false;
 
 let cachedAgVersion = typeof AllCommunityModule?.version === 'string'
@@ -200,15 +201,36 @@ const registerColumnMenuGuard = (enterprise) => {
   }
 };
 
-const ensureModulesRegistered = () => {
-  if (modulesRegistered) return;
+const registerModulesSafely = (modules) => {
+  const toRegister = [];
+  (modules || []).forEach((module) => {
+    const name = module?.moduleName || module?.name || null;
+    if (name && registeredModuleNames.has(name)) {
+      return;
+    }
+    if (name) {
+      registeredModuleNames.add(name);
+    }
+    if (module) {
+      toRegister.push(module);
+    }
+  });
+
+  if (!toRegister.length) {
+    return;
+  }
 
   try {
-    ModuleRegistry.registerModules([AllCommunityModule, TextFilterModule, ColumnAutoSizeModule, ValidationModule]);
+    ModuleRegistry.registerModules(toRegister);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('AgGridJS failed to register AllCommunityModule', err);
+    console.error('AgGridJS failed to register modules', err);
   }
+};
+
+const ensureModulesRegistered = () => {
+  registerModulesSafely([AllCommunityModule, TextFilterModule, ColumnAutoSizeModule, ValidationModule]);
+
   try {
     const enterprise = EnterpriseModules;
 
@@ -271,9 +293,7 @@ const ensureModulesRegistered = () => {
       console.warn('AgGridJS integrated charts requested but no ag-charts module is installed');
     }
 
-    if (additional.length) {
-      ModuleRegistry.registerModules(additional);
-    }
+    registerModulesSafely(additional);
 
     if (isDevEnv) {
       const names = additional.map((module) => module?.moduleName).filter(Boolean);
@@ -292,7 +312,6 @@ const ensureModulesRegistered = () => {
     registerColumnMenuGuard(null);
   }
 
-  modulesRegistered = true;
 };
 
 const createDeferred = () => {
@@ -349,6 +368,8 @@ const setApiInstance = (gridId, api) => {
   };
 };
 
+// Keep registerProps normaliser for future event opt-ins; Dash-side validation already handles
+// available_properties, but retaining this avoids accidental agent additions elsewhere.
 const normaliseRegisterProps = (raw) => {
   if (!raw) {
     return new Set();
@@ -366,6 +387,144 @@ const normaliseRegisterProps = (raw) => {
   }
   return new Set();
 };
+
+const ensureMetadataObject = () => {
+  if (typeof window === 'undefined') return null;
+  let meta =
+    window.__dash_component_metadata__
+    || window.__dash_component_metadata
+    || window.dash_component_metadata
+    || window._dashprivate_componentMetadata;
+
+  if (!meta && componentMetadata) {
+    meta = JSON.parse(JSON.stringify(componentMetadata));
+    window.__dash_component_metadata__ = meta;
+  }
+  return meta;
+};
+
+const extendDashMetadata = (extraPropsSet) => {
+  if (typeof window === 'undefined') return;
+  const meta = ensureMetadataObject();
+  if (!meta) return;
+
+  const extendPropsObject = (comp) => {
+    if (!comp || typeof comp !== 'object' || !comp.props) return;
+    extraPropsSet.forEach((prop) => {
+      if (!prop || comp.props[prop]) {
+        return;
+      }
+      comp.props[prop] = {
+        type: { name: 'any' },
+        required: false,
+        description: 'Dynamic prop registered via registerProps',
+      };
+    });
+  };
+
+  if (meta.AgGridJS) {
+    extendPropsObject(meta.AgGridJS);
+  }
+  Object.values(meta).forEach((entry) => {
+    if (entry && entry.displayName === 'AgGridJS') {
+      extendPropsObject(entry);
+    }
+  });
+
+  let registryMeta =
+    window?.dash_component_api?.componentRegistry?.metadata
+    || window?.dash_component_api?._componentMetadata
+    || window?.dash_renderer?.componentMetadata;
+
+  if (!registryMeta && window?.dash_component_api?.componentRegistry) {
+    window.dash_component_api.componentRegistry.metadata = JSON.parse(JSON.stringify(meta));
+    registryMeta = window.dash_component_api.componentRegistry.metadata;
+  }
+  if (registryMeta) {
+    extendPropsObject(registryMeta.AgGridJS);
+    Object.values(registryMeta).forEach((entry) => {
+      if (entry && entry.displayName === 'AgGridJS') {
+        extendPropsObject(entry);
+      }
+    });
+  }
+};
+
+const collectRegisterPropsFromLayout = () => {
+  if (typeof window === 'undefined') return new Set();
+  const layout = window._dash_layout || window.__dash_layout;
+  if (!layout) return new Set();
+  const propsSet = new Set();
+
+  const walk = (node) => {
+    if (!node) return;
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    if (node && typeof node === 'object') {
+      const isAgGrid =
+        node.type === 'AgGridJS' ||
+        node.component === 'AgGridJS' ||
+        (node.namespace === 'dash_aggrid_js' && node.type);
+      if (isAgGrid && node.props && node.props.registerProps) {
+        normaliseRegisterProps(node.props.registerProps).forEach((p) => propsSet.add(p));
+      }
+      if (node.props) {
+        walk(node.props.children || node.props._dashprivate_children);
+        Object.values(node.props).forEach((v) => {
+          if (v && typeof v === 'object') {
+            walk(v);
+          }
+        });
+      }
+      if (node.children) {
+        walk(node.children);
+      }
+    }
+  };
+
+  walk(layout);
+  return propsSet;
+};
+
+const ensureRegistryMetadata = () => {
+  if (typeof window === 'undefined') return;
+  const registry = window?.dash_component_api?.componentRegistry;
+  if (!registry) return;
+  if (!registry.metadata) {
+    const meta = ensureMetadataObject();
+    if (meta) {
+      registry.metadata = JSON.parse(JSON.stringify(meta));
+    }
+  }
+};
+
+const bootstrapMetadata = () => {
+  try {
+    ensureMetadataObject();
+    ensureRegistryMetadata();
+    const layoutProps = collectRegisterPropsFromLayout();
+    extendDashMetadata(layoutProps);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('AgGridJS metadata bootstrap failed', err);
+  }
+};
+
+// Bootstrap immediately and schedule a short retry to catch late layout availability
+bootstrapMetadata();
+if (typeof window !== 'undefined') {
+  let retries = 50;
+  const retry = () => {
+    retries -= 1;
+    bootstrapMetadata();
+    if (retries > 0) {
+      window.setTimeout(retry, 100);
+    }
+  };
+  window.setTimeout(retry, 100);
+}
 
 const withSsrmFilterValues = (options, gridId, configArgs) => {
   if (!gridId || !configArgs || !configArgs.ssrm || !options) {
@@ -539,25 +698,6 @@ const normaliseFilterModel = (model) => {
   return copy;
 };
 
-const buildCellEventPayload = (event) => {
-  const colId = event?.column?.getColId?.() ?? event?.colDef?.field ?? null;
-  const field = event?.colDef?.field ?? null;
-  const data = event?.data ?? null;
-  const value = typeof event?.value !== 'undefined'
-    ? event.value
-    : (field && data && typeof data === 'object' ? data[field] : null);
-  return {
-    rowId: event?.data?.id ?? event?.node?.id ?? null,
-    rowIndex: typeof event?.rowIndex === 'number'
-      ? event.rowIndex
-      : (typeof event?.node?.rowIndex === 'number' ? event.node.rowIndex : null),
-    colId,
-    field,
-    value,
-    data,
-  };
-};
-
 /**
  * AgGridJS mounts AgGridReact using configurations stored on window.AGGRID_CONFIGS.
  * The component relays selection, filter, sort, and edit events back to Dash via setProps.
@@ -573,11 +713,6 @@ const AgGridJS = (props) => {
     setProps,            // injected by Dash
     registerProps = null,
   } = props;
-
-  const registeredProps = useMemo(() => normaliseRegisterProps(registerProps), [registerProps]);
-  const wantsProp = (propName) =>
-    registeredProps.has(propName)
-    || Object.prototype.hasOwnProperty.call(props, propName);
 
   const apiRef = useRef(null);
   const awaitingRowDataConfigRef = useRef(!(Array.isArray(rowDataProp) && rowDataProp.length > 0));
@@ -613,8 +748,6 @@ const AgGridJS = (props) => {
     dashProps: props,
     setProps,
   }));
-
-  const shouldSyncCellClicked = wantsProp('cellClicked');
 
   useEffect(() => {
     awaitingRowDataConfigRef.current = !(Array.isArray(rowDataProp) && rowDataProp.length > 0);
@@ -691,8 +824,6 @@ const AgGridJS = (props) => {
     onSelectionChanged: userSelection,
     onFilterChanged: userFilter,
     onSortChanged: userSort,
-    onCellValueChanged: userEdit,
-    onCellClicked: userCellClicked,
     theme: userTheme,
     ...gridOptions
   } = resolvedConfig;
@@ -709,6 +840,50 @@ const AgGridJS = (props) => {
   }
 
   const gridOptionsWithSsrm = withSsrmFilterValues(finalGridOptions, id, configArgs);
+
+  const registerPropsSet = useMemo(() => normaliseRegisterProps(registerProps), [registerProps]);
+  useEffect(() => {
+    ensureRegistryMetadata();
+    extendDashMetadata(registerPropsSet);
+  }, [registerPropsSet]);
+
+  const gridUsesSetFilter = () => {
+    const defs = [
+      ...(Array.isArray(gridOptionsWithSsrm?.columnDefs) ? gridOptionsWithSsrm.columnDefs : []),
+      ...(Array.isArray(gridOptionsWithSsrm?.autoGroupColumnDef?.children)
+        ? gridOptionsWithSsrm.autoGroupColumnDef.children
+        : []),
+    ];
+    const filters = defs
+      .map((def) => def?.filter || gridOptionsWithSsrm?.defaultColDef?.filter || null)
+      .filter(Boolean);
+    return filters.some((f) => f === true || String(f) === 'agSetColumnFilter');
+  };
+
+  const resolveConfigModules = () => {
+    const requested = [];
+    const raw = gridOptionsWithSsrm?.modules;
+    if (Array.isArray(raw)) {
+      raw.forEach((item) => {
+        if (item && typeof item === 'object') {
+          requested.push(item);
+          return;
+        }
+        if (typeof item === 'string' && EnterpriseModules[item]) {
+          requested.push(EnterpriseModules[item]);
+        }
+      });
+    }
+    if (gridUsesSetFilter() && EnterpriseModules.SetFilterModule) {
+      requested.push(EnterpriseModules.SetFilterModule);
+    }
+    return requested;
+  };
+
+  const extraModules = useMemo(resolveConfigModules, [configArgsKey, configKey, id]);
+  if (extraModules.length) {
+    registerModulesSafely(extraModules);
+  }
 
   const syncSelectedRows = () => {
     if (!setProps || !apiRef.current) {
@@ -748,30 +923,6 @@ const AgGridJS = (props) => {
   const onFilterChanged = withDash(userFilter, syncFilterModel);
   const onSortChanged = withDash(userSort, syncSortModel);
 
-  const onCellValueChanged = withDash(userEdit, (event) => {
-    if (!setProps || !wantsProp('editedCells')) {
-      return;
-    }
-    const payload = {
-      rowId: event?.data?.id ?? event?.node?.id ?? null,
-      colId: event?.column?.getColId?.() ?? event?.colDef?.field ?? null,
-      oldValue: event?.oldValue,
-      newValue: event?.newValue,
-    };
-    setProps({ editedCells: [payload] });
-  });
-
-  const dashCellClickedHandler = shouldSyncCellClicked
-    ? (event) => {
-      if (!setProps) {
-        return;
-      }
-      setProps({ cellClicked: buildCellEventPayload(event) });
-    }
-    : null;
-
-  const onCellClicked = withDash(userCellClicked, dashCellClickedHandler);
-
   useEffect(() => {
     if (!apiRef.current) {
       return;
@@ -810,14 +961,14 @@ const AgGridJS = (props) => {
           onSelectionChanged={onSelectionChanged}
           onFilterChanged={onFilterChanged}
           onSortChanged={onSortChanged}
-          onCellValueChanged={onCellValueChanged}
-          onCellClicked={onCellClicked}
         />
       </div>
     </div>
   );
 };
 
+// AI/agents: keep this propTypes list minimal. Do NOT add custom/event props here.
+// Users opt into extra Dash props via registerProps + their asset handlers.
 AgGridJS.propTypes = {
   /**
    * The ID used to identify this component in Dash callbacks.

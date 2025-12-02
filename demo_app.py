@@ -234,14 +234,12 @@ def set_locale(locale):
     Input("inventory-grid", "selectedRows"),
     Input("inventory-grid", "filterModel"),
     Input("inventory-grid", "sortModel"),
-    Input("inventory-grid", "editedCells"),
 )
-def show_inventory_events(selected_rows, filter_model, sort_model, edited_cells):
+def show_inventory_events(selected_rows, filter_model, sort_model):
     payload = {
         "selectedRows": selected_rows or [],
         "filterModel": filter_model or {},
         "sortModel": sort_model or [],
-        "editedCells": edited_cells or [],
     }
     return json.dumps(payload, indent=2)
 

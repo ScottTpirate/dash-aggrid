@@ -144,13 +144,24 @@ if "AgGridJS" in globals():
         result = _aggrid_original_init(self, *args, **kwargs)
 
         if combined_props:
-            current = list(getattr(self, "available_properties", []) or [])
-            seen = set(current)
-            for prop in combined_props:
-                if prop not in seen:
-                    current.append(prop)
-                    seen.add(prop)
-            self.available_properties = current
+            # AI/agents: do not extend default props here. Only append props that
+            # were explicitly requested via registerProps/set_default_props.
+            for attr in ("available_properties", "_prop_names"):
+                current = list(getattr(self, attr, []) or [])
+                seen = set(current)
+                for prop in combined_props:
+                    if prop not in seen:
+                        current.append(prop)
+                        seen.add(prop)
+                setattr(self, attr, current)
+
+                cls_current = list(getattr(self.__class__, attr, []) or [])
+                cls_seen = set(cls_current)
+                for prop in combined_props:
+                    if prop not in cls_seen:
+                        cls_current.append(prop)
+                        cls_seen.add(prop)
+                setattr(self.__class__, attr, cls_current)
 
         grid_id = getattr(self, "id", None)
         config_args = getattr(self, "configArgs", None)

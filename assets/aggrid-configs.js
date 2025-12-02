@@ -57,6 +57,20 @@
       });
       const inventory = context?.dashProps?.rowData || [];
       const setProps = context?.setProps;
+
+      const resolveRollup = (node) => {
+        if (!node) {
+          return null;
+        }
+        if (node.aggData && typeof node.aggData === 'object') {
+          return node.aggData;
+        }
+        if (node.data && typeof node.data === 'object') {
+          return node.data;
+        }
+        return null;
+      };
+
       return {
         rowData: inventory,
         columnDefs: [
@@ -170,6 +184,33 @@
           pinned: 'left',
           suppressHeaderMenuButton: true,
         },
+        onCellClicked: function onCellClicked(event) {
+          // Users must include "cellClicked" (or any custom prop) in registerProps on the Dash side
+          // before wiring callbacks to it. This handler only emits; Dash validation is opt-in.
+          if (!setProps) {
+            return;
+          }
+          const isGroup = !!event?.node?.group;
+          const rollupData = isGroup ? resolveRollup(event?.node) || null : null;
+          const column =
+            (event?.column && typeof event.column.getColId === 'function' && event.column.getColId()) ||
+            event?.colDef?.field ||
+            null;
+          const payload = {
+            colId: column,
+            value: event?.value,
+            data: isGroup ? rollupData : event?.data || null,
+            groupData: rollupData || event?.node?.groupData || null,
+            nodeIsGroup: isGroup,
+            rowIndex: typeof event?.rowIndex === 'number' ? event.rowIndex : null,
+              timestamp: Date.now(),
+          };
+          try {
+            setProps({ cellClicked: payload });
+          } catch (err) {
+            console.error('Failed to dispatch summary click event', err);
+          }
+        },
       };
     },
     'analytics-grid': function analyticsGrid(context) {
@@ -249,6 +290,8 @@
       const gridId = context?.id || 'ssrm-grid';
       const ssrmArgs = context?.configArgs?.ssrm || {};
       const baseEndpoint = String(ssrmArgs.endpoint || '/_aggrid/ssrm').replace(/\/$/, '');
+      const themes = window.AgGridJsThemes || {};
+      const alpineTheme = themes.themeAlpine;
 
       const createDatasource = () => ({
         getRows(params) {
@@ -275,39 +318,54 @@
 
       return {
         columnDefs: [
-          { field: 'order_id', headerName: 'Order ID', maxWidth: 130 },
-          { field: 'region', filter: 'agSetColumnFilter', rowGroup: true },
-          { field: 'product', minWidth: 160, filter: 'agSetColumnFilter' },
-          { field: 'category', minWidth: 150, filter: 'agSetColumnFilter' },
-          { field: 'quarter', maxWidth: 140, filter: 'agSetColumnFilter' },
-          { field: 'units', type: 'numericColumn', aggFunc: 'sum' },
+          { field: 'region', rowGroup: true },
+          { field: 'units', type: 'numericColumn', aggFunc: 'sum', maxWidth: 140 },
           {
             field: 'revenue',
             type: 'numericColumn',
             aggFunc: 'sum',
-            valueFormatter: (params) => Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(params.value || 0)
-          }
+            minWidth: 150,
+            valueFormatter: (params) =>
+              Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(params.value || 0)
+          },
+          { field: 'product', minWidth: 150 },
+          { field: 'category', minWidth: 140 },
+          { field: 'quarter', maxWidth: 120 },
+          { field: 'order_id', headerName: 'Order ID', maxWidth: 130 },
         ],
         defaultColDef: {
           flex: 1,
           sortable: true,
-          filter: true,
+          filter: false,
           resizable: true,
           enableRowGroup: true,
           enablePivot: true,
           enableValue: true,
+          minWidth: 110,
+          menuTabs: ['generalMenuTab', 'columnsMenuTab'],
         },
         autoGroupColumnDef: {
           minWidth: 220,
         },
+        theme: alpineTheme
+          ? alpineTheme.withParams({
+              accentColor: '#2563eb',
+              borderRadius: 10,
+            })
+          : undefined,
         rowModelType: 'serverSide',
         cacheBlockSize: 100,
         maxBlocksInCache: 10,
         suppressAggFuncInHeader: true,
         animateRows: true,
         rowGroupPanelShow: 'always',
-        sideBar: ['columns', 'filters'],
+        sideBar: ['columns'],
         serverSideDatasource: createDatasource(),
+        onFirstDataRendered: (params) => {
+          if (params?.api && params.columnApi?.autoSizeAllColumns) {
+            params.columnApi.autoSizeAllColumns();
+          }
+        },
       };
     },
   };
