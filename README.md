@@ -334,7 +334,7 @@ AgGridJS(
 configs["ssrm-grid"] = function ssrmGrid(context = {}) {
   const gridId = context.id || "ssrm-grid";
   const ssrmArgs = context.configArgs?.ssrm || {};
-  const baseEndpoint = String(ssrmArgs.endpoint || "/_aggrid/ssrm").replace(/\/$/, "");
+  const baseEndpoint = String(ssrmArgs.endpoint || "_aggrid/ssrm").replace(/\/$/, "");
 
   const datasource = {
     getRows(params) {
@@ -371,7 +371,7 @@ configs["ssrm-grid"] = function ssrmGrid(context = {}) {
 ```
 
 3) **What the backend does**
-- `configArgs["ssrm"]` triggers `register_duckdb_ssrm` (Python) to expose routes under `/_aggrid/ssrm/<gridId>` plus `/distinct/<col>` for set filters.
+- `configArgs["ssrm"]` triggers `register_duckdb_ssrm` (Python) to expose routes under `_aggrid/ssrm/<gridId>` plus `/distinct/<col>` for set filters. Use relative paths so app prefixes (e.g., Dash Enterprise) are preserved.
 - Incoming SSRM datasource requests are translated into DuckDB SQL via `dash_aggrid_js.ssrm.sql_for`.
 - Requires `duckdb` installed in your Dash environment.
 

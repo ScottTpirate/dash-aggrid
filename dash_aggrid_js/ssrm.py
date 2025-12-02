@@ -438,12 +438,12 @@ def register_duckdb_ssrm(grid_id: str, config: Mapping[str, Any]) -> str:
     grid_key = str(grid_id)
     existing = _SSRM_REGISTRY.get(grid_key)
     if existing:
-        return "/" + existing["base"]
+        return existing["base"]
 
     _ensure_duckdb_available()
     base = config.get("endpoint") or config.get("base") or config.get("base_route")
     canonical_base = _normalise_route_base(base)
-    base_endpoint = "/" + canonical_base
+    base_endpoint = canonical_base
     distinct_endpoint = f"{base_endpoint}/distinct"
 
     duckdb_path = config.get("duckdb_path") or config.get("path") or config.get("database")

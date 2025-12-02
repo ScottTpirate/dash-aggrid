@@ -289,7 +289,7 @@
     'ssrm-grid': function ssrmGrid(context) {
       const gridId = context?.id || 'ssrm-grid';
       const ssrmArgs = context?.configArgs?.ssrm || {};
-      const baseEndpoint = String(ssrmArgs.endpoint || '/_aggrid/ssrm').replace(/\/$/, '');
+      const baseEndpoint = String(ssrmArgs.endpoint || '_aggrid/ssrm').replace(/\/$/, '');
       const themes = window.AgGridJsThemes || {};
       const alpineTheme = themes.themeAlpine;
 

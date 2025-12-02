@@ -532,7 +532,7 @@ const withSsrmFilterValues = (options, gridId, configArgs) => {
   }
 
   const ssrmArgs = configArgs.ssrm || {};
-  const baseEndpointRaw = ssrmArgs.endpoint || ssrmArgs.base || '/_aggrid/ssrm';
+  const baseEndpointRaw = ssrmArgs.endpoint || ssrmArgs.base || '_aggrid/ssrm';
   const distinctEndpointRaw = ssrmArgs.distinctEndpoint || `${baseEndpointRaw}/distinct`;
   const baseEndpoint = String(baseEndpointRaw).replace(/\/$/, '');
   const distinctEndpoint = String(distinctEndpointRaw).replace(/\/$/, '');
