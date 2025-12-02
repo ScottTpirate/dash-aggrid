@@ -368,6 +368,227 @@
         },
       };
     },
+    'row-drag-grid': function rowDragGrid(context) {
+      const themes = window.AgGridJsThemes || {};
+      const alpineTheme = themes.themeAlpine;
+      const bucket = context?.configArgs?.bucket || 'left';
+      const initialRows = (context?.configArgs?.rowData || []).map((row) => ({ ...row }));
+      const setProps = context?.setProps;
+
+      const state = (window.__rowDragBinState = window.__rowDragBinState || {
+        grids: {},
+        apiToBucket: new WeakMap(),
+        linked: false,
+        seq: 100,
+        binAttached: new WeakSet(),
+        factoriesBound: false,
+      });
+
+      const maxId = initialRows.reduce((max, row) => Math.max(max, Number(row.id) || 0), 0);
+      state.seq = Math.max(state.seq, maxId + 1);
+
+      const emit = (payload) => {
+        if (typeof setProps !== 'function') {
+          return;
+        }
+        try {
+          setProps({ rowDragEvent: { ...payload, timestamp: Date.now() } });
+        } catch (err) {
+          console.error('Failed to emit row drag event', err);
+        }
+      };
+
+      const createDataItem = (color) => ({
+        id: state.seq++,
+        color: color || 'Red',
+        value1: Math.floor(Math.random() * 100),
+        value2: Math.floor(Math.random() * 100),
+      });
+
+      const addRecordToGrid = (side, data, source) => {
+        if (!data || data.id == null) {
+          return;
+        }
+        const api = state.grids[side];
+        if (!api) {
+          return;
+        }
+        const idStr = String(data.id);
+        if (api.getRowNode(idStr)) {
+          return;
+        }
+        api.applyTransaction({ add: [data] });
+        emit({ type: source || 'factory-add', target: side, ids: [data.id] });
+      };
+
+      const handleFactoryButton = (btn) => {
+        const color = btn?.dataset?.color;
+        const side = (btn?.dataset?.side || 'left').toLowerCase();
+        const data = createDataItem(color);
+        addRecordToGrid(side, data, 'factory-add');
+      };
+
+      const ensureFactories = () => {
+        if (state.factoriesBound) {
+          return;
+        }
+        const buttons = document.querySelectorAll('.row-drag-factory');
+        buttons.forEach((btn) => {
+          btn.addEventListener('click', () => handleFactoryButton(btn));
+        });
+        if (buttons.length) {
+          state.factoriesBound = true;
+        }
+      };
+
+      const handleTransfer = (targetBucket, params) => {
+        const targetApi = state.grids[targetBucket];
+        const sourceBucket = targetBucket === 'left' ? 'right' : 'left';
+        const sourceApi = state.grids[sourceBucket];
+        if (!targetApi || !sourceApi) {
+          return;
+        }
+
+        const nodes = Array.isArray(params?.nodes) && params.nodes.length ? params.nodes : params?.node ? [params.node] : [];
+        if (!nodes.length) {
+          return;
+        }
+
+        const rows = nodes.map((node) => node?.data).filter(Boolean);
+        const toAdd = rows.filter((row) => !targetApi.getRowNode(String(row.id)));
+
+        if (!toAdd.length) {
+          return;
+        }
+
+        targetApi.applyTransaction({ add: toAdd });
+        sourceApi.applyTransaction({ remove: toAdd });
+
+        emit({ type: 'grid-drop', source: sourceBucket, target: targetBucket, ids: toAdd.map((r) => r.id) });
+      };
+
+      const handleBinDrop = (params) => {
+        const nodes = Array.isArray(params?.nodes) && params.nodes.length ? params.nodes : params?.node ? [params.node] : [];
+        const rows = nodes.map((node) => node?.data).filter(Boolean);
+        if (!rows.length) {
+          return;
+        }
+
+        ['left', 'right'].forEach((side) => {
+          const api = state.grids[side];
+          if (!api) {
+            return;
+          }
+          const existing = rows.filter((row) => api.getRowNode(String(row.id)));
+          if (existing.length) {
+            api.applyTransaction({ remove: existing });
+          }
+        });
+
+        emit({ type: 'bin-drop', target: 'bin', ids: rows.map((r) => r.id) });
+      };
+
+      const ensureBinDropZone = (api) => {
+        if (!api || state.binAttached.has(api)) {
+          return;
+        }
+        const bin = document.getElementById('row-drag-bin');
+        if (!bin) {
+          return;
+        }
+        const icon = bin.querySelector('.bin-icon');
+        const setActive = (active) => {
+          bin.classList.toggle('bin-active', !!active);
+          if (icon) {
+            icon.classList.toggle('bin-icon-active', !!active);
+          }
+        };
+
+        const dropZone = {
+          getContainer: () => bin,
+          onDragEnter: () => setActive(true),
+          onDragLeave: () => setActive(false),
+          onDragStop: (params) => {
+            handleBinDrop(params);
+            setActive(false);
+          },
+          onDragCancel: () => setActive(false),
+        };
+
+        api.addRowDropZone(dropZone);
+        state.binAttached.add(api);
+      };
+
+      const linkGrids = () => {
+        if (state.linked || !state.grids.left || !state.grids.right) {
+          return;
+        }
+
+        const leftDropZone = state.grids.left.getRowDropZoneParams({
+          onDragStop: (params) => handleTransfer('left', params),
+        });
+        const rightDropZone = state.grids.right.getRowDropZoneParams({
+          onDragStop: (params) => handleTransfer('right', params),
+        });
+
+        state.grids.left.addRowDropZone(rightDropZone);
+        state.grids.right.addRowDropZone(leftDropZone);
+
+        state.linked = true;
+      };
+
+      const onGridReady = (params) => {
+        state.grids[bucket] = params.api;
+        state.apiToBucket.set(params.api, bucket);
+
+        if (params?.api?.setGridOption) {
+          params.api.setGridOption('rowData', initialRows);
+        }
+
+        linkGrids();
+        ensureBinDropZone(params.api);
+        ensureFactories();
+
+        if (params?.api?.sizeColumnsToFit) {
+          params.api.sizeColumnsToFit();
+        }
+      };
+
+      return {
+        columnDefs: [
+          { field: 'id', rowDrag: true, maxWidth: 120 },
+          { field: 'color', minWidth: 120 },
+          { field: 'value1' },
+          { field: 'value2' },
+        ],
+        defaultColDef: {
+          flex: 1,
+          minWidth: 110,
+          sortable: true,
+          filter: true,
+          resizable: true,
+        },
+        rowClassRules: {
+          'red-row': "data.color === 'Red'",
+          'green-row': "data.color === 'Green'",
+          'blue-row': "data.color === 'Blue'",
+        },
+        rowData: initialRows,
+        getRowId: (params) => String(params?.data?.id || ''),
+        rowSelection: { mode: 'multiRow', rowMultiSelectWithClick: true },
+        rowDragManaged: true,
+        rowDragMultiRow: true,
+        suppressMoveWhenRowDragging: true,
+        animateRows: true,
+        theme: alpineTheme
+          ? alpineTheme.withParams({
+              accentColor: bucket === 'right' ? '#2563eb' : '#22c55e',
+              borderRadius: 10,
+            })
+          : undefined,
+        onGridReady,
+      };
+    },
   };
 
   window.AGGRID_CONFIGS = {

@@ -13,6 +13,21 @@ DATA_DIR = Path(__file__).parent
 DUCKDB_FILE = DATA_DIR / "ssrm_demo.duckdb"
 SSRM_TABLE = "ssrm_demo"
 
+ROW_DRAG_BACKLOG = [
+    {"id": 101, "color": "Red", "value1": 64, "value2": 18},
+    {"id": 102, "color": "Green", "value1": 14, "value2": 83},
+    {"id": 103, "color": "Blue", "value1": 76, "value2": 11},
+    {"id": 104, "color": "Red", "value1": 54, "value2": 22},
+    {"id": 105, "color": "Green", "value1": 67, "value2": 65},
+    {"id": 106, "color": "Blue", "value1": 21, "value2": 90},
+]
+
+ROW_DRAG_ACTIVE = [
+    {"id": 201, "color": "Red", "value1": 45, "value2": 15},
+    {"id": 202, "color": "Green", "value1": 88, "value2": 42},
+    {"id": 203, "color": "Blue", "value1": 39, "value2": 77},
+]
+
 
 def ensure_demo_duckdb():
     if DUCKDB_FILE.exists():
@@ -144,6 +159,117 @@ app.layout = html.Div(
                 ),
             ],
             style={"display": "flex", "flexWrap": "wrap", "gap": "1.5rem"},
+        ),
+        html.Div(
+            [
+                html.H3("Row dragging between grids + delete bin"),
+                html.P(
+                    "Drag rows left/right or drop them on the bin to delete. Buttons spawn new rows on either side; "
+                    "row IDs stay unique so duplicates are skipped automatically."
+                ),
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(
+                                    [
+                                        html.Button(
+                                            "Add Red",
+                                            className="row-drag-factory row-drag-factory-red",
+                                            **{"data-color": "Red", "data-side": "left"},
+                                        ),
+                                        html.Button(
+                                            "Add Green",
+                                            className="row-drag-factory row-drag-factory-green",
+                                            **{"data-color": "Green", "data-side": "left"},
+                                        ),
+                                        html.Button(
+                                            "Add Blue",
+                                            className="row-drag-factory row-drag-factory-blue",
+                                            **{"data-color": "Blue", "data-side": "left"},
+                                        ),
+                                    ],
+                                    className="row-drag-toolbar",
+                                ),
+                                AgGridJS(
+                                    id="row-drag-left",
+                                    configKey="row-drag-grid",
+                                    configArgs={"bucket": "left", "rowData": ROW_DRAG_BACKLOG},
+                                    style={"height": "360px"},
+                                    registerProps=["rowDragEvent"],
+                                ),
+                                html.Small(
+                                    "Left grid (row drag managed, suppressMoveWhenRowDragging=true)",
+                                    style={"display": "block"},
+                                ),
+                            ],
+                            className="row-drag-column",
+                        ),
+                        html.Div(
+                            [
+                                html.Div(
+                                    [
+                                        html.Div("🗑️", className="bin-icon"),
+                                        html.Div("Drop here to delete rows", className="bin-label"),
+                                    ],
+                                    id="row-drag-bin",
+                                    className="row-drag-bin",
+                                ),
+                            ],
+                            className="row-drag-bin-wrapper",
+                        ),
+                        html.Div(
+                            [
+                                html.Div(
+                                    [
+                                        html.Button(
+                                            "Add Red",
+                                            className="row-drag-factory row-drag-factory-red",
+                                            **{"data-color": "Red", "data-side": "right"},
+                                        ),
+                                        html.Button(
+                                            "Add Green",
+                                            className="row-drag-factory row-drag-factory-green",
+                                            **{"data-color": "Green", "data-side": "right"},
+                                        ),
+                                        html.Button(
+                                            "Add Blue",
+                                            className="row-drag-factory row-drag-factory-blue",
+                                            **{"data-color": "Blue", "data-side": "right"},
+                                        ),
+                                    ],
+                                    className="row-drag-toolbar",
+                                ),
+                                AgGridJS(
+                                    id="row-drag-right",
+                                    configKey="row-drag-grid",
+                                    configArgs={"bucket": "right", "rowData": ROW_DRAG_ACTIVE},
+                                    style={"height": "360px"},
+                                    registerProps=["rowDragEvent"],
+                                ),
+                                html.Small(
+                                    "Right grid; drop rows here from the left or send them to the bin.",
+                                    style={"display": "block"},
+                                ),
+                            ],
+                            className="row-drag-column",
+                        ),
+                    ],
+                    className="row-drag-shell",
+                ),
+                html.Div(
+                    [
+                        html.Strong("Event console"),
+                        html.Pre(
+                            id="row-drag-console",
+                            className="row-drag-console",
+                            children="Drag rows or click a factory button to see events.",
+                        ),
+                    ],
+                    style={"marginTop": "0.75rem"},
+                ),
+            ],
+            style={"marginTop": "2rem"},
         ),
         html.Div(
             [
@@ -281,6 +407,20 @@ def show_inventory_clicks(data):
 def show_sales_selection(selected_rows):
     rows = selected_rows or []
     return json.dumps({"selectedRows": rows, "count": len(rows)}, indent=2)
+
+
+@app.callback(
+    Output("row-drag-console", "children"),
+    Input("row-drag-left", "rowDragEvent"),
+    Input("row-drag-right", "rowDragEvent"),
+)
+def show_row_dragging_console(left_event, right_event):
+    events = [e for e in (left_event, right_event) if e]
+    if not events:
+        return "Drag rows between grids or drop them on the bin to see event payloads."
+
+    latest = max(events, key=lambda evt: evt.get("timestamp", 0))
+    return json.dumps(latest, indent=2)
 
 
 if __name__ == "__main__":
