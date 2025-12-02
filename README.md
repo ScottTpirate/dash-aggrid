@@ -372,6 +372,26 @@ configs["ssrm-grid"] = function ssrmGrid(context = {}) {
 
 3) **What the backend does**
 - `configArgs["ssrm"]` triggers `register_duckdb_ssrm` (Python) to expose routes under `_aggrid/ssrm/<gridId>` plus `/distinct/<col>` for set filters. Use relative paths so app prefixes (e.g., Dash Enterprise) are preserved.
+- To avoid “No SSRM configuration registered for grid …” in multi‑worker deployments, eagerly register your SSRM grids at import time (once per process):
+
+  ```python
+  # content/foo/service.py
+  from dash_aggrid_js import register_duckdb_ssrm
+
+  DUCKDB_PATH = "/mount/foo/foo.duckdb"
+  TABLE = "(SELECT * FROM foo) AS foo_ssrm"
+
+  def _register_ssrm():
+      cfg = {"duckdb_path": DUCKDB_PATH, "table": TABLE}
+      register_duckdb_ssrm("foo-grid", cfg)
+      # if you forward filterModel from another grid
+      cfg_drill = dict(cfg, forwardFilterModel=True)
+      register_duckdb_ssrm("foo-drilldown-grid", cfg_drill)
+
+  _register_ssrm()
+  ```
+
+  This ensures every worker process has the SSRM registry populated before the first datasource request arrives; retries become a safety net rather than a requirement.
 - Incoming SSRM datasource requests are translated into DuckDB SQL via `dash_aggrid_js.ssrm.sql_for`.
 - Requires `duckdb` installed in your Dash environment.
 
