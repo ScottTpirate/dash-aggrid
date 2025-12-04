@@ -1,0 +1,116 @@
+.row-drag-shell {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.row-drag-column {
+  flex: 1 1 320px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row-drag-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.row-drag-factory {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #0f172a;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.row-drag-factory:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.row-drag-factory-red {
+  background: #fecdd3;
+  color: #7f1d1d;
+}
+
+.row-drag-factory-green {
+  background: #bbf7d0;
+  color: #064e3b;
+}
+
+.row-drag-factory-blue {
+  background: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.row-drag-bin-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+}
+
+.row-drag-bin {
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 1rem 1.4rem;
+  text-align: center;
+  min-height: 200px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  justify-content: center;
+  align-items: center;
+  color: #475569;
+  background: #f8fafc;
+  transition: all 140ms ease;
+}
+
+.row-drag-bin .bin-icon {
+  font-size: 2rem;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.row-drag-bin .bin-label {
+  font-size: 0.95rem;
+}
+
+.row-drag-bin.bin-active {
+  border-color: #ef4444;
+  background: #fee2e2;
+  color: #991b1b;
+  transform: translateY(-2px);
+}
+
+.row-drag-bin .bin-icon.bin-icon-active {
+  transform: scale(1.18);
+}
+
+.row-drag-console {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.ag-row.red-row {
+  background-color: #fee2e2 !important;
+}
+
+.ag-row.green-row {
+  background-color: #dcfce7 !important;
+}
+
+.ag-row.blue-row {
+  background-color: #dbeafe !important;
+}
