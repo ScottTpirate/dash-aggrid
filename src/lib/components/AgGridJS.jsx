@@ -877,6 +877,12 @@ const AgGridJS = (props) => {
     if (gridUsesSetFilter() && EnterpriseModules.SetFilterModule) {
       requested.push(EnterpriseModules.SetFilterModule);
     }
+    if (
+      (gridOptionsWithSsrm?.enableAdvancedFilter || gridOptionsWithSsrm?.advancedFilterParent)
+      && EnterpriseModules.AdvancedFilterModule
+    ) {
+      requested.push(EnterpriseModules.AdvancedFilterModule);
+    }
     return requested;
   };
 
@@ -884,6 +890,7 @@ const AgGridJS = (props) => {
   if (extraModules.length) {
     registerModulesSafely(extraModules);
   }
+  const gridModules = extraModules;
 
   const syncSelectedRows = () => {
     if (!setProps || !apiRef.current) {
@@ -957,6 +964,7 @@ const AgGridJS = (props) => {
       <div style={{ width: '100%', height: '100%' }}>
         <AgGridReact
           {...gridOptionsWithSsrm}
+          modules={gridModules}
           onGridReady={onGridReady}
           onSelectionChanged={onSelectionChanged}
           onFilterChanged={onFilterChanged}

@@ -2,7 +2,7 @@
 name = "DashAggridJs"
 uuid = "1b08a953-4be3-4667-9a23-42bdf1ba7241"
 authors = ["Scott Kilgore <skilgore@landmarktx.com>"]
-version = "0.4.9"
+version = "0.4.10"
 
 [deps]
 Dash = "1b08a953-4be3-4667-9a23-3db579824955"
