@@ -18,7 +18,7 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = [
-  "dash>=3.3",
+  "dash>=3.1",
 ]
 dynamic = ["version"]
 
