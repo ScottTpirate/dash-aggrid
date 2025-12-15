@@ -3,7 +3,7 @@ module DashAggridJs
 using Dash
 
 const resources_path = realpath(joinpath( @__DIR__, "..", "deps"))
-const version = "0.4.10"
+const version = "0.4.11"
 
 include("jl/agjs_agchartsjs.jl")
 include("jl/agjs_aggridjs.jl")

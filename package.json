@@ -1,6 +1,6 @@
 {
   "name": "dash-aggrid-js",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "Tiny Dash wrapper that mounts AgGridReact using a JS config registry",
   "repository": {
     "type": "git",
