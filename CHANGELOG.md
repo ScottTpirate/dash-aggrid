@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 ## Unreleased
 ### Added
 - (none)
+### Fixed
+- Memoized SSRM column patching in `AgGridJS` to prevent row group state resets on sort-triggered renders.
 
 ## 0.4.1 - 2025-11-25
 ### Added

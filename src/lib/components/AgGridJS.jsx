@@ -228,8 +228,28 @@ const registerModulesSafely = (modules) => {
   }
 };
 
+const applyEnterpriseLicenseKey = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const licenseKey = window.AGGRID_LICENSE_KEY;
+  const manager = EnterpriseModules?.LicenseManager;
+  if (!licenseKey || !manager || typeof manager.setLicenseKey !== 'function') {
+    return false;
+  }
+  try {
+    manager.setLicenseKey(licenseKey);
+    return true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('AgGridJS failed to apply enterprise license', err);
+    return false;
+  }
+};
+
 const ensureModulesRegistered = () => {
   registerModulesSafely([AllCommunityModule, TextFilterModule, ColumnAutoSizeModule, ValidationModule]);
+  applyEnterpriseLicenseKey();
 
   try {
     const enterprise = EnterpriseModules;
@@ -825,21 +845,28 @@ const AgGridJS = (props) => {
     onFilterChanged: userFilter,
     onSortChanged: userSort,
     theme: userTheme,
-    ...gridOptions
+    ...gridOptionsRaw
   } = resolvedConfig;
 
-  const finalGridOptions = Array.isArray(rowDataProp)
-    ? { ...gridOptions, rowData: rowDataProp }
-    : { ...gridOptions };
-  const derivedTheme = typeof userTheme === 'undefined' ? 'legacy' : userTheme;
-  finalGridOptions.theme = derivedTheme;
+  const gridOptions = useMemo(() => ({ ...(gridOptionsRaw || {}) }), [gridOptionsRaw]);
+  const finalGridOptions = useMemo(() => {
+    const next = Array.isArray(rowDataProp)
+      ? { ...gridOptions, rowData: rowDataProp }
+      : { ...gridOptions };
+    const derivedTheme = typeof userTheme === 'undefined' ? 'legacy' : userTheme;
+    next.theme = derivedTheme;
+    return next;
+  }, [gridOptions, rowDataProp, userTheme]);
 
   if (isDevEnv) {
     const validationKey = configKey || id || 'aggrid-js-grid';
     validateGridMenuConfig(validationKey, finalGridOptions);
   }
 
-  const gridOptionsWithSsrm = withSsrmFilterValues(finalGridOptions, id, configArgs);
+  const gridOptionsWithSsrm = useMemo(
+    () => withSsrmFilterValues(finalGridOptions, id, configArgs),
+    [finalGridOptions, id, configArgsKey],
+  );
 
   const registerPropsSet = useMemo(() => normaliseRegisterProps(registerProps), [registerProps]);
   useEffect(() => {
