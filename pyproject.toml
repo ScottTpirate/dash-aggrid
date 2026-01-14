@@ -40,6 +40,9 @@ Homepage = "https://github.com/ScottTpirate/dash-aggrid"
 Source = "https://github.com/ScottTpirate/dash-aggrid"
 Tracker = "https://github.com/ScottTpirate/dash-aggrid/issues"
 
+[project.scripts]
+dash-aggrid-js-build = "dash_aggrid_js.build:main"
+
 [tool.setuptools]
 include-package-data = true
 packages = ["dash_aggrid_js", "dash_aggrid"]

@@ -1,6 +1,6 @@
 {
   "name": "dash-aggrid-js",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Tiny Dash wrapper that mounts AgGridReact using a JS config registry",
   "repository": {
     "type": "git",
@@ -15,7 +15,9 @@
     "start": "webpack serve --config ./webpack.serve.config.js --open",
     "validate-init": "python _validate_init.py",
     "prepublishOnly": "npm run validate-init",
+    "set:aggrid-version": "python scripts/set_aggrid_version.py",
     "build:js": "webpack --mode production",
+    "build:aggrid": "python scripts/set_aggrid_version.py && npm run build:js",
     "build:backends": "python -m dash.development.component_generator ./src/lib/components dash_aggrid_js -p package-info.json --r-prefix 'agjs' --jl-prefix 'agjs' --ignore \\.test\\.",
     "build:backends-activated": "(. venv/bin/activate || venv\\scripts\\activate && npm run build:backends)",
     "build": "npm run build:js && npm run build:backends",
@@ -24,11 +26,11 @@
   "author": "Scott Kilgore <skilgore@landmarktx.com>",
   "license": "MIT",
   "dependencies": {
-    "ag-charts-community": "^12.3.1",
-    "ag-charts-enterprise": "^12.3.1",
-    "ag-grid-community": "^34.3.1",
-    "ag-grid-enterprise": "^34.3.1",
-    "ag-grid-react": "^34.3.1"
+    "ag-charts-community": "latest",
+    "ag-charts-enterprise": "latest",
+    "ag-grid-community": "latest",
+    "ag-grid-enterprise": "latest",
+    "ag-grid-react": "latest"
   },
   "devDependencies": {
     "@babel/core": "^7.22.1",
@@ -39,6 +41,7 @@
     "@plotly/webpack-dash-dynamic-import": "^1.2.0",
     "babel-eslint": "^10.1.0",
     "babel-loader": "^9.1.2",
+    "baseline-browser-mapping": "^2.9.14",
     "copyfiles": "^2.1.1",
     "css-loader": "^6.8.1",
     "eslint": "^6.0.1",

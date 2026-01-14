@@ -26,6 +26,23 @@ const ensureChartsModules = () => {
   }
 };
 
+const resolveTheme = () => {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+  const resolver = window.AGCHART_THEME_RESOLVER;
+  if (typeof resolver !== 'function') {
+    return undefined;
+  }
+  try {
+    return resolver();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('AgChartsJS theme resolver failed', err);
+    return undefined;
+  }
+};
+
 const getChartConfig = (key, context) => {
   if (typeof window === 'undefined') {
     return null;
@@ -158,8 +175,10 @@ const AgChartsJS = (props) => {
       return;
     }
 
+    const resolvedTheme = resolveTheme();
     const chartOptions = {
       ...resolvedOptions,
+      ...(resolvedTheme ? { theme: resolvedTheme } : {}),
       container: containerRef.current,
     };
 
@@ -180,6 +199,35 @@ const AgChartsJS = (props) => {
       chartRef.current = AgCharts.create(chartOptions);
     }
   }, [resolvedOptions]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const handler = () => {
+      if (!chartRef.current) {
+        return;
+      }
+      const resolvedTheme = resolveTheme();
+      if (!resolvedTheme) {
+        return;
+      }
+      try {
+        chartRef.current.update({ theme: resolvedTheme });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('AgChartsJS theme update failed', err);
+      }
+    };
+
+    window.addEventListener('agcharts-theme', handler);
+    handler();
+
+    return () => {
+      window.removeEventListener('agcharts-theme', handler);
+    };
+  }, []);
 
   useEffect(() => () => {
     if (chartRef.current) {

@@ -422,6 +422,38 @@ Notes:
 
 ---
 
+## Custom AG Grid versions (build-time)
+
+AG Grid is bundled into the JS build, so switching versions is a **build-time** operation. The easiest way to do this is the built-in CLI:
+
+1. Ensure Node.js + npm are installed.
+2. Run the build command from a **source checkout** of this repo.
+
+Examples:
+
+```bash
+# Pin both AG Grid + AG Charts
+python -m dash_aggrid_js.build --aggrid 34.3.5 --agcharts 12.3.5
+
+# Use "latest" for both
+python -m dash_aggrid_js.build --latest
+```
+
+3. Install the rebuilt package:
+
+```bash
+python -m build
+pip install dist/dash_aggrid_js-*.whl
+```
+
+Notes:
+- `--no-install` skips `npm install` (use if `node_modules/` is already up to date).
+- `--skip-build` updates versions without rebuilding the JS bundle.
+- You can also use env vars: `AGGRID_VERSION` and `AGCHARTS_VERSION`.
+- This rebuilds the bundled JS under `dash_aggrid_js/` that Dash serves at runtime.
+
+---
+
 ## Testing
 
 - `pytest dash-aggrid/tests` runs a headless browser smoke test that ensures demo grids render rows. It skips if Chrome/Chromedriver is unavailable.
