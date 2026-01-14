@@ -376,6 +376,23 @@ if (typeof window !== 'undefined') {
   }
 }
 
+const resolveChartThemeName = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const resolver = window.AGCHART_THEME_RESOLVER;
+  if (typeof resolver !== 'function') {
+    return null;
+  }
+  try {
+    return resolver();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[AgGridJS] chart theme resolver failed', err);
+    return null;
+  }
+};
+
 const setApiInstance = (gridId, api) => {
   const registry = ensureApiRegistry();
   if (!registry || !gridId) {
@@ -956,6 +973,48 @@ const AgGridJS = (props) => {
   const onSelectionChanged = withDash(userSelection, syncSelectedRows);
   const onFilterChanged = withDash(userFilter, syncFilterModel);
   const onSortChanged = withDash(userSort, syncSortModel);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    const handler = () => {
+      if (!apiRef.current) {
+        return;
+      }
+      const themeName = resolveChartThemeName();
+      if (!themeName) {
+        return;
+      }
+      if (
+        typeof apiRef.current.getChartModels !== 'function' ||
+        typeof apiRef.current.updateChart !== 'function'
+      ) {
+        return;
+      }
+      const models = apiRef.current.getChartModels() || [];
+      models.forEach((model) => {
+        if (!model || !model.chartId) {
+          return;
+        }
+        const updateType = model.modelType === 'pivot'
+          ? 'pivotChartUpdate'
+          : 'rangeChartUpdate';
+        try {
+          apiRef.current.updateChart({
+            type: updateType,
+            chartId: model.chartId,
+            chartThemeName: themeName,
+          });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('[AgGridJS] failed to update integrated chart theme', err);
+        }
+      });
+    };
+    window.addEventListener('agcharts-theme', handler);
+    return () => window.removeEventListener('agcharts-theme', handler);
+  }, []);
 
   useEffect(() => {
     if (!apiRef.current) {
