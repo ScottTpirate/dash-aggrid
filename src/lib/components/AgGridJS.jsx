@@ -150,6 +150,7 @@ class ColumnMenuGuard extends BeanStub {
 
 const registeredModuleNames = new Set();
 let menuGuardRegistered = false;
+const registeredChartsRegistries = new WeakSet();
 
 let cachedAgVersion = typeof AllCommunityModule?.version === 'string'
   ? AllCommunityModule.version
@@ -247,6 +248,69 @@ const applyEnterpriseLicenseKey = () => {
   }
 };
 
+const collectChartsRegistries = () => {
+  const registries = [];
+  const addRegistry = (registry, modules) => {
+    if (!registry || !modules) {
+      return;
+    }
+    registries.push({ registry, modules });
+  };
+
+  let integratedModule = null;
+
+  try {
+    // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+    const chartsEnterprise = require('ag-charts-enterprise');
+    addRegistry(
+      chartsEnterprise?.ModuleRegistry || null,
+      chartsEnterprise?.AllEnterpriseModule
+        || chartsEnterprise?.AllCommunityModule
+        || chartsEnterprise?.AgChartsEnterpriseModule
+        || chartsEnterprise?.AgChartsCommunityModule
+        || null,
+    );
+    integratedModule = chartsEnterprise?.AgChartsEnterpriseModule
+      || chartsEnterprise?.AgChartsCommunityModule
+      || integratedModule;
+  } catch (err) {
+    // optional dependency
+  }
+
+  try {
+    // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+    const chartsCommunity = require('ag-charts-community');
+    addRegistry(
+      chartsCommunity?.ModuleRegistry || null,
+      chartsCommunity?.AllCommunityModule || chartsCommunity?.AgChartsCommunityModule || null,
+    );
+    integratedModule = integratedModule || chartsCommunity?.AgChartsCommunityModule || null;
+  } catch (err) {
+    // optional dependency
+  }
+
+  return { registries, integratedModule };
+};
+
+const ensureChartsRegistries = (registries) => {
+  (registries || []).forEach(({ registry, modules }) => {
+    if (!registry || !modules || registeredChartsRegistries.has(registry)) {
+      return;
+    }
+    try {
+      if (Array.isArray(modules)) {
+        registry.registerModules(modules);
+      } else {
+        registry.registerModules([modules]);
+      }
+      registeredChartsRegistries.add(registry);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('AgGridJS failed to register AG Charts modules', err);
+    }
+  });
+};
+
 const ensureModulesRegistered = () => {
   registerModulesSafely([AllCommunityModule, TextFilterModule, ColumnAutoSizeModule, ValidationModule]);
   applyEnterpriseLicenseKey();
@@ -287,28 +351,12 @@ const ensureModulesRegistered = () => {
     addIfPresent(enterprise.ServerSideRowModelModule);
     addIfPresent(enterprise.ServerSideRowModelApiModule);
 
-    let chartsModule = null;
-    try {
-      // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-      const chartsEnterprise = require('ag-charts-enterprise');
-      chartsModule = chartsEnterprise?.AgChartsEnterpriseModule || chartsEnterprise?.AgChartsCommunityModule || null;
-    } catch (err) {
-      chartsModule = null;
-    }
+    const { registries, integratedModule } = collectChartsRegistries();
+    ensureChartsRegistries(registries);
 
-    if (!chartsModule) {
-      try {
-        // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-        const chartsCommunity = require('ag-charts-community');
-        chartsModule = chartsCommunity?.AgChartsCommunityModule || null;
-      } catch (err) {
-        chartsModule = null;
-      }
-    }
-
-    if (enterprise.IntegratedChartsModule && chartsModule) {
-      additional.push(enterprise.IntegratedChartsModule.with(chartsModule));
-    } else if (enterprise.IntegratedChartsModule && !chartsModule) {
+    if (enterprise.IntegratedChartsModule && integratedModule) {
+      additional.push(enterprise.IntegratedChartsModule.with(integratedModule));
+    } else if (enterprise.IntegratedChartsModule && !integratedModule) {
       // eslint-disable-next-line no-console
       console.warn('AgGridJS integrated charts requested but no ag-charts module is installed');
     }

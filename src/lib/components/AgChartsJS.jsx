@@ -1,29 +1,63 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { AgCharts, setupCommunityModules } from 'ag-charts-community';
+import {
+  AgCharts as CommunityAgCharts,
+  ModuleRegistry as CommunityModuleRegistry,
+  AllCommunityModule,
+  AgChartsCommunityModule,
+} from 'ag-charts-community';
 
-let setupEnterpriseModules;
-try {
-  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-  ({ setupEnterpriseModules } = require('ag-charts-enterprise'));
-} catch (err) {
-  setupEnterpriseModules = null;
-}
+let AgCharts = CommunityAgCharts;
 
-let chartsRegistered = false;
-const ensureChartsModules = () => {
-  if (chartsRegistered) {
+const chartsRegistries = [];
+const registerChartsRegistry = (registry, modules) => {
+  if (!registry || !modules) {
     return;
   }
+  chartsRegistries.push({ registry, modules });
+};
 
-  try {
-    setupCommunityModules?.();
-    setupEnterpriseModules?.();
-    chartsRegistered = true;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('AgChartsJS module registration failed', err);
+registerChartsRegistry(
+  CommunityModuleRegistry,
+  AllCommunityModule || AgChartsCommunityModule || null,
+);
+
+try {
+  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+  const chartsEnterprise = require('ag-charts-enterprise');
+  if (chartsEnterprise?.AgCharts) {
+    AgCharts = chartsEnterprise.AgCharts;
   }
+  registerChartsRegistry(
+    chartsEnterprise?.ModuleRegistry || null,
+    chartsEnterprise?.AllEnterpriseModule
+      || chartsEnterprise?.AllCommunityModule
+      || chartsEnterprise?.AgChartsEnterpriseModule
+      || chartsEnterprise?.AgChartsCommunityModule
+      || null,
+  );
+} catch (err) {
+  // fall back to community exports
+}
+
+const registeredChartsRegistries = new WeakSet();
+const ensureChartsModules = () => {
+  chartsRegistries.forEach(({ registry, modules }) => {
+    if (!registry || !modules || registeredChartsRegistries.has(registry)) {
+      return;
+    }
+    try {
+      if (Array.isArray(modules)) {
+        registry.registerModules(modules);
+      } else {
+        registry.registerModules([modules]);
+      }
+      registeredChartsRegistries.add(registry);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('AgChartsJS module registration failed', err);
+    }
+  });
 };
 
 const resolveTheme = () => {
