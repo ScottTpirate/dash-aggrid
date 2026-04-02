@@ -21,6 +21,10 @@ npm ci
 - Sync versions: `make sync-version VERSION=0.3.1` (updates `__about__.py`, `package.json`, `dash_aggrid_js/package-info.json`)
 - Build distributables: `make dist` (runs JS build first, then `python -m build`)
 
+Notes:
+- `make` defaults to `python3`; override with `PYTHON=/path/to/python` if needed.
+- `npm run build` now auto-detects `python3`/`python` via `scripts/run_python.js`, so it works on machines where `python` is not on PATH.
+
 ## Branch/PR expectations
 
 - Keep PRs small and scoped. Include a short summary of behavior changes.

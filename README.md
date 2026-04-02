@@ -46,10 +46,9 @@ Clone the repo and run the sample app:
 ```bash
 git clone https://github.com/ScottTpirate/dash-aggrid.git
 cd dash-aggrid
-npm install
-python -m pip install -e .
-npm run build
-python app.py
+make install-dev
+make js-build
+python3 app.py
 ```
 
 Visit http://127.0.0.1:8050 for the sample app. `demo_app.py` renders three grids (including an integrated chart) and a standalone AG Charts example powered by `AgChartsJS`. The configs live in `assets/aggrid-configs.js` and `assets/agcharts-configs.js`.
@@ -70,9 +69,8 @@ pip install dash-aggrid-js
 
 ```bash
 cd dash-aggrid
-npm install
-npm run build          # builds JS bundle + backends
-pip install -e .
+make install-dev
+make js-build          # installs JS deps, builds the JS bundle, and regenerates the backends
 ```
 
 ---
@@ -500,6 +498,19 @@ Notes:
 - Build assets + wheels locally with `make dist` (runs `npm run build` then `python -m build`).
 - Git tags of the form `vX.Y.Z` trigger the `Publish` workflow, which verifies the tag matches the version, rebuilds assets, runs tests, and publishes to PyPI using `PYPI_API_TOKEN`.
 - CI (`CI` workflow) runs lint/build/tests on PRs and pushes to `main`/`master`.
+
+Recommended release flow:
+
+```bash
+make sync-version VERSION=0.6.3
+make js-build
+make test
+make dist
+git commit -am "Release 0.6.3"
+git tag v0.6.3
+git push origin main
+git push origin v0.6.3
+```
 - Keep `CHANGELOG.md` updated for anything user-facing.
 
 ---
