@@ -13,12 +13,12 @@
   "main": "build/index.js",
   "scripts": {
     "start": "webpack serve --config ./webpack.serve.config.js --open",
-    "validate-init": "python _validate_init.py",
+    "validate-init": "node scripts/run_python.js _validate_init.py",
     "prepublishOnly": "npm run validate-init",
-    "set:aggrid-version": "python scripts/set_aggrid_version.py",
+    "set:aggrid-version": "node scripts/run_python.js scripts/set_aggrid_version.py",
     "build:js": "webpack --mode production",
-    "build:aggrid": "python scripts/set_aggrid_version.py && npm run build:js",
-    "build:backends": "python -m dash.development.component_generator ./src/lib/components dash_aggrid_js -p package-info.json --r-prefix 'agjs' --jl-prefix 'agjs' --ignore \\.test\\.",
+    "build:aggrid": "node scripts/run_python.js scripts/set_aggrid_version.py && npm run build:js",
+    "build:backends": "node scripts/run_python.js -m dash.development.component_generator ./src/lib/components dash_aggrid_js -p package-info.json --r-prefix 'agjs' --jl-prefix 'agjs' --ignore \\.test\\.",
     "build:backends-activated": "(. venv/bin/activate || venv\\scripts\\activate && npm run build:backends)",
     "build": "npm run build:js && npm run build:backends",
     "build:activated": "npm run build:js && npm run build:backends-activated"
