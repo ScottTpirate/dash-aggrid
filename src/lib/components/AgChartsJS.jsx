@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { AgCharts, ModuleRegistry, AgChartsCommunityModule } from 'ag-charts-community';
+import { AgCharts, ModuleRegistry, AllCommunityModule } from 'ag-charts-community';
 
 let setupEnterpriseModules;
-let AgChartsEnterpriseModule;
+let AllEnterpriseModule;
 try {
   // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-  ({ setupEnterpriseModules, AgChartsEnterpriseModule } = require('ag-charts-enterprise'));
+  ({ setupEnterpriseModules, AllEnterpriseModule } = require('ag-charts-enterprise'));
 } catch (err) {
   setupEnterpriseModules = null;
-  AgChartsEnterpriseModule = null;
+  AllEnterpriseModule = null;
 }
 
 let chartsRegistered = false;
@@ -30,9 +30,11 @@ const ensureChartsModules = () => {
       legacySetupCommunityModules();
       setupEnterpriseModules?.();
     } else {
-      const modules = [AgChartsCommunityModule];
-      if (AgChartsEnterpriseModule) {
-        modules.push(AgChartsEnterpriseModule);
+      const modules = [];
+      if (AllEnterpriseModule) {
+        modules.push(AllEnterpriseModule);
+      } else if (AllCommunityModule) {
+        modules.push(AllCommunityModule);
       }
       ModuleRegistry.registerModules(modules.filter(Boolean));
     }

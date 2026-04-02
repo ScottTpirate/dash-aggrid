@@ -12,6 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 ### Fixed
 - (none)
 
+## 0.6.4 - 2026-04-02
+### Fixed
+- Registered the correct AG Charts 13 aggregate modules in `AgChartsJS` so standalone bar/line charts initialize successfully after the AG Charts upgrade.
+
 ## 0.6.3 - 2026-04-02
 ### Changed
 - Updated the default bundled AG Grid packages to 35.2.0 and AG Charts packages to 13.2.0.
