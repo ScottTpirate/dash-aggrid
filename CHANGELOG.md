@@ -7,7 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 ## Unreleased
 ### Added
 - (none)
+### Changed
+- (none)
 ### Fixed
+- (none)
+
+## 0.6.3 - 2026-04-02
+### Changed
+- Updated the default bundled AG Grid packages to 35.2.0 and AG Charts packages to 13.2.0.
+- Switched the publish workflow back to tag-push releases so pushing `vX.Y.Z` matches the documented release process.
+
+### Fixed
+- Brought package metadata and `package-lock.json` back into sync so release builds use the documented default AG versions.
 - Memoized SSRM column patching in `AgGridJS` to prevent row group state resets on sort-triggered renders.
 
 ## 0.4.1 - 2025-11-25
@@ -15,7 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 - `set_default_props([...])` helper to apply a default registerProps list across all grids.
 
 ### Changed
-- Release workflow now runs on published GitHub Releases (with manual dispatch) instead of tag pushes.
+- Release workflow now runs on tag pushes (with manual dispatch) and the repo docs reflect that flow.
 - Fixed Node cache path in CI/Release workflows so dependency caching resolves correctly.
 
 ## 0.4.0 - 2025-11-25

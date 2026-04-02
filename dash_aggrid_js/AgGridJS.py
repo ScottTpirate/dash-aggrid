@@ -66,7 +66,7 @@ Keyword arguments:
     - sort (a value equal to: 'asc', 'desc'; optional)
 
     - sortIndex (number; optional)"""
-    _children_props: typing.List[str] = []
+    _children_props = []
     _base_nodes = ['children']
     _namespace = 'dash_aggrid_js'
     _type = 'AgGridJS'

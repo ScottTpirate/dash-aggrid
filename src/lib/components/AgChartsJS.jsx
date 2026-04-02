@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { AgCharts, setupCommunityModules } from 'ag-charts-community';
+import { AgCharts, ModuleRegistry, AgChartsCommunityModule } from 'ag-charts-community';
 
 let setupEnterpriseModules;
+let AgChartsEnterpriseModule;
 try {
   // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-  ({ setupEnterpriseModules } = require('ag-charts-enterprise'));
+  ({ setupEnterpriseModules, AgChartsEnterpriseModule } = require('ag-charts-enterprise'));
 } catch (err) {
   setupEnterpriseModules = null;
+  AgChartsEnterpriseModule = null;
 }
 
 let chartsRegistered = false;
@@ -17,8 +19,23 @@ const ensureChartsModules = () => {
   }
 
   try {
-    setupCommunityModules?.();
-    setupEnterpriseModules?.();
+    let legacySetupCommunityModules = null;
+    try {
+      // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+      ({ setupCommunityModules: legacySetupCommunityModules } = require('ag-charts-community'));
+    } catch (err) {
+      legacySetupCommunityModules = null;
+    }
+    if (typeof legacySetupCommunityModules === 'function') {
+      legacySetupCommunityModules();
+      setupEnterpriseModules?.();
+    } else {
+      const modules = [AgChartsCommunityModule];
+      if (AgChartsEnterpriseModule) {
+        modules.push(AgChartsEnterpriseModule);
+      }
+      ModuleRegistry.registerModules(modules.filter(Boolean));
+    }
     chartsRegistered = true;
   } catch (err) {
     // eslint-disable-next-line no-console
