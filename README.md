@@ -35,7 +35,7 @@
 - **No prop translation.** The exact object you pass to `AgGridReact` in the docs is what the wrapper forwards.
 - **Pure JavaScript configs.** Keep row models, value formatters, renderers, and callbacks in JavaScript without serialising through Python.
 - **Minimal Dash glue.** Only selection, filters, sorting, edits, and cell clicks are mirrored back to Dash for callbacks.
-- **AG Grid v34.x** compatible (Community + optional Enterprise).
+- **AG Grid v35.x / AG Charts v13.x** compatible (Community + optional Enterprise).
 
 ---
 
@@ -46,10 +46,9 @@ Clone the repo and run the sample app:
 ```bash
 git clone https://github.com/ScottTpirate/dash-aggrid.git
 cd dash-aggrid
-npm install
-python -m pip install -e .
-npm run build
-python app.py
+make install-dev
+make js-build
+python3 app.py
 ```
 
 Visit http://127.0.0.1:8050 for the sample app. `demo_app.py` renders three grids (including an integrated chart) and a standalone AG Charts example powered by `AgChartsJS`. The configs live in `assets/aggrid-configs.js` and `assets/agcharts-configs.js`.
@@ -70,9 +69,8 @@ pip install dash-aggrid-js
 
 ```bash
 cd dash-aggrid
-npm install
-npm run build          # builds JS bundle + backends
-pip install -e .
+make install-dev
+make js-build          # installs JS deps, builds the JS bundle, and regenerates the backends
 ```
 
 ---
@@ -279,7 +277,7 @@ Defaults are merged into each grid's `registerProps` unless you explicitly pass 
 
 ## Styling & theming
 
-- AgGridJS registers `window.AgGridJsThemes.themeQuartz` and `themeAlpine` (from AG Grid v34). Set `theme` on your config to use them.
+- AgGridJS registers `window.AgGridJsThemes.themeQuartz` and `themeAlpine` (from AG Grid v35). Set `theme` on your config to use them.
 - Include AG Grid CSS separately in your Dash app (e.g., add `ag-grid.css` + a theme CSS to `assets/` or link from a CDN).
 - Use your own CSS by applying `className`/`style` on the Dash component and custom cell renderers in the registry.
 
@@ -433,7 +431,7 @@ Examples:
 
 ```bash
 # Pin both AG Grid + AG Charts
-python -m dash_aggrid_js.build --aggrid 34.3.5 --agcharts 12.3.5
+python -m dash_aggrid_js.build --aggrid 35.2.0 --agcharts 13.2.0
 
 # Use "latest" for both
 python -m dash_aggrid_js.build --latest
@@ -487,7 +485,7 @@ Notes:
 
 ## AI assistant playbook
 
-- Do not invent props; use AG Grid docs (v34) and the registry pattern shown above.
+- Do not invent props; use AG Grid docs that match the bundled major version (currently v35) and the registry pattern shown above.
 - Keep complex logic in JS assets; pass only JSON-friendly state through Dash props.
 - Prefer set filters, row grouping, and SSRM examples from AG Grid's official guides; adapt minimally.
 - When editing docs or code, avoid mixing this wrapper with `dash-ag-grid`.
@@ -496,10 +494,23 @@ Notes:
 
 ## Packaging & distribution
 
-- Version lives in `dash_aggrid_js/__about__.py`; keep `package.json` and `dash_aggrid_js/package-info.json` in sync via `make sync-version VERSION=X.Y.Z`.
+- Version lives in `dash_aggrid_js/__about__.py`; keep `package.json`, `dash_aggrid_js/package-info.json`, and `package-lock.json` in sync via `make sync-version VERSION=X.Y.Z` and a follow-up `npm install`.
 - Build assets + wheels locally with `make dist` (runs `npm run build` then `python -m build`).
 - Git tags of the form `vX.Y.Z` trigger the `Publish` workflow, which verifies the tag matches the version, rebuilds assets, runs tests, and publishes to PyPI using `PYPI_API_TOKEN`.
 - CI (`CI` workflow) runs lint/build/tests on PRs and pushes to `main`/`master`.
+
+Recommended release flow:
+
+```bash
+make sync-version VERSION=0.6.3
+make js-build
+make test
+make dist
+git commit -am "Release 0.6.3"
+git tag v0.6.3
+git push origin main
+git push origin v0.6.3
+```
 - Keep `CHANGELOG.md` updated for anything user-facing.
 
 ---

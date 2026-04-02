@@ -1,4 +1,5 @@
 SHELL := /bin/bash
+PYTHON ?= python3
 
 .PHONY: help install-dev js-build sync-version lint test dist clean-dist
 
@@ -11,24 +12,25 @@ help:
 	@echo "  make dist           # build wheel+sdist (runs js-build first)"
 
 install-dev:
-	python -m pip install -e .[dev,test]
+	$(PYTHON) -m pip install -e .[dev,test]
 
 js-build:
 	npm ci
-	npm run build
+	./node_modules/.bin/webpack --mode production
+	node scripts/run_python.js -m dash.development.component_generator ./src/lib/components dash_aggrid_js -p package-info.json --r-prefix 'agjs' --jl-prefix 'agjs' --ignore '\\.test\\.'
 
 sync-version:
-	python scripts/sync_version.py $(VERSION)
+	$(PYTHON) scripts/sync_version.py $(VERSION)
 
 lint:
 	pre-commit run --all-files
 
 test:
-	python -m pip install -e .[test]
-	pytest
+	$(PYTHON) -m pip install -e .[test]
+	$(PYTHON) -m pytest
 
 clean-dist:
 	rm -rf build/ dist/ *.egg-info
 
 dist: clean-dist js-build
-	python -m build
+	$(PYTHON) -m build

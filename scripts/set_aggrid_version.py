@@ -49,13 +49,13 @@ def main() -> int:
         "--aggrid",
         dest="aggrid",
         default=None,
-        help="Version for ag-grid-* packages (e.g. 34.3.5, ^34.3.1, latest).",
+        help="Version for ag-grid-* packages (e.g. 35.2.0, ^35.2.0, latest).",
     )
     parser.add_argument(
         "--agcharts",
         dest="agcharts",
         default=None,
-        help="Version for ag-charts-* packages (e.g. 12.3.5, ^12.3.1, latest).",
+        help="Version for ag-charts-* packages (e.g. 13.2.0, ^13.2.0, latest).",
     )
     parser.add_argument(
         "--latest",
